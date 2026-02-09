@@ -1,0 +1,3095 @@
+================================================================================
+CONTEXTMEET: AI-POWERED MEETING CONTEXT ASSISTANT
+COMPLETE REQUIREMENTS DOCUMENT
+================================================================================
+Status: Initial Planning Phase
+Version: 1.0
+Date: February 10, 2026
+Prepared by: Senior AI Engineer & System Architect (20+ years experience)
+
+================================================================================
+EXECUTIVE SUMMARY
+================================================================================
+
+Project Name: ContextMeet
+Objective: Develop an intelligent multi-agent system that automatically manages
+meeting context, generates pre-meeting preparations, and delivers smart reminders
+across multiple channels (Email, Telegram, WhatsApp).
+
+Technology Stack Philosophy:
+- 100% Free and Open Source (no paid services)
+- Local AI Processing (no cloud costs)
+- Privacy-first architecture (data stays local)
+- Scalable to 1000+ users within free tier limits
+- Production-ready in 5-6 weeks
+
+This document serves as the single source of truth for all development decisions,
+architecture choices, and implementation guidelines.
+
+================================================================================
+SECTION 1: BUSINESS REQUIREMENTS
+================================================================================
+
+1.1 PROBLEM STATEMENT
+
+Current Market Gap:
+- Remote teams lose 30+ minutes per day searching for meeting context
+- Existing solutions either: (a) cost too much, (b) offer limited features,
+  (c) send notifications users never see
+- Small businesses and freelancers lack affordable meeting management tools
+- No solution combines: AI context + multi-channel notifications + local privacy
+
+User Pain Points:
+- Joining meeting with no context: What is this about?
+- Forgotten action items from previous meetings
+- Calendar apps show title only, no intelligent brief
+- Notifications arrive via email (rarely checked)
+- Manual coordination of meeting preparation
+- No learning system to improve over time
+
+1.2 SOLUTION OVERVIEW
+
+ContextMeet solves these problems by:
+
+Creating an AI-powered personal meeting assistant that:
+- Automatically syncs with user's Google Calendar
+- Generates intelligent meeting briefs using local AI (Mistral 7B)
+- Delivers context via preferred channels (Email, Telegram, WhatsApp)
+- Learns user patterns and optimizes notification timing
+- Automates meeting preparation (fetches documents, manages tasks)
+- Provides post-meeting follow-up and action tracking
+
+1.3 TARGET USERS
+
+Primary Users:
+- Remote workers in tech companies (5-50 people)
+- Freelancers and solo consultants
+- Small business owners
+- Team leads and project managers
+- Knowledge workers managing 5-15 meetings per week
+
+User Persona: Sarah, 32-year-old Product Manager
+- Manages 12 meetings per week across time zones
+- Uses Zoom, Google Meet, and Teams
+- Often joins calls unprepared (wastes 10+ minutes per week)
+- Checks Telegram constantly, ignores email
+- Wants peace of mind before important client calls
+- Currently uses basic Google Calendar + no automation
+
+1.4 SUCCESS METRICS
+
+Quantitative Targets:
+- User saves 15-20 minutes per week on meeting preparation
+- 90% of notifications are seen (Telegram engagement vs Email)
+- Zero missed meetings due to forgotten preparation
+- 95% uptime for notification delivery
+- System handles 100+ meetings per user per month
+- Average setup time: less than 5 minutes
+
+User Adoption Targets:
+- 100 active users in first 3 months (beta)
+- 1000+ users by end of year 1
+- Net Promoter Score (NPS) target: 50+
+- User referral rate: 20%
+- Churn rate: less than 2% per month
+
+Business Metrics:
+- Cost to acquire user: zero (organic growth + word of mouth)
+- Cost to serve user: less than $0.10 per month (within free tier limits)
+- Lifetime value: $0 (free core product, optional premium features later)
+
+================================================================================
+SECTION 2: FUNCTIONAL REQUIREMENTS (PHASE BREAKDOWN)
+================================================================================
+
+2.1 PHASE 1: MVP CORE FEATURES (WEEKS 1-4)
+
+F1: USER AUTHENTICATION AND ONBOARDING
+--------------------------------------
+Feature: Secure user account creation and Google OAuth integration
+
+Requirements:
+- F1.1: User registration with email (allows sign-up without Google initially)
+- F1.2: Google OAuth 2.0 integration for secure account linking
+- F1.3: Automatic Google Calendar permission request during first login
+- F1.4: One-click calendar authorization (user sees permission scope)
+- F1.5: Local session management with JWT tokens
+- F1.6: Password reset via email
+- F1.7: Two-factor authentication (optional but recommended)
+
+Implementation Details:
+- Use Google Identity Services (OAuth 2.0 flow)
+- Store OAuth tokens in encrypted format in database
+- Token refresh mechanism (auto-refresh before expiry)
+- Session timeout after 30 days of inactivity
+
+Success Criteria:
+- New user completes setup in under 5 minutes
+- Zero authentication errors in testing
+- Secure credential storage (no plaintext tokens)
+
+F2: CALENDAR SYNCHRONIZATION AND MONITORING
+---------------------------------------------
+Feature: Real-time calendar event detection and syncing
+
+Requirements:
+- F2.1: Fetch user's calendar events from Google Calendar API
+- F2.2: Support multiple calendars per user (work, personal, team)
+- F2.3: Filter events for next 7 days (optimization)
+- F2.4: Detect new events, updates, and cancellations
+- F2.5: Ignore declined or tentative meetings (only confirmed)
+- F2.6: Extract event details: title, time, attendees, description, meeting link
+- F2.7: Parse meeting links (Zoom, Google Meet, Microsoft Teams, others)
+- F2.8: Handle recurring events (identify individual occurrences)
+- F2.9: Continuous background sync every 15 minutes
+- F2.10: Real-time sync via Google Calendar webhooks (push notifications)
+
+Implementation Details:
+- Google Calendar API push notifications (free, real-time)
+- Fallback polling if webhooks fail (every 15 minutes)
+- Event deduplication (avoid processing same event twice)
+- Timezone handling (convert to user's local timezone)
+- Cache events in database to reduce API calls
+
+Success Criteria:
+- New calendar event detected within 30 seconds
+- API call count: under 100 requests per day per user
+- Zero missed events due to sync failures
+- Proper handling of all-day events and multi-day events
+
+F3: AI-POWERED MEETING CONTEXT GENERATION
+-------------------------------------------
+Feature: Intelligent brief generation using Mistral 7B local AI
+
+Requirements:
+- F3.1: Extract meeting metadata (title, attendees, time, description)
+- F3.2: Query meeting history from database (past meetings with same attendees)
+- F3.3: Perform semantic search on past meeting notes (vector embeddings)
+- F3.4: Fetch recent emails with meeting attendees (Gmail API integration)
+- F3.5: Generate AI-powered meeting brief (purpose, key topics, agenda)
+- F3.6: Classify meeting type (1-on-1, team sync, client call, brainstorm, etc)
+- F3.7: Extract action items from past meeting notes
+- F3.8: Generate preparation checklist (customized per meeting type)
+- F3.9: Identify potential risks or discussion points
+- F3.10: Create bullet-point summary (max 200 words)
+- F3.11: Store generated context in database with timestamp
+
+Implementation Details:
+- Mistral 7B model via Ollama (local inference, no API calls)
+- Prompt engineering for consistent, high-quality outputs
+- Vector database (ChromaDB) for semantic search on meeting history
+- Email parsing and relevance scoring
+- RAG (Retrieval Augmented Generation) for context accuracy
+
+Success Criteria:
+- Context generation completes within 10 seconds
+- AI output is relevant to 95% of meetings
+- System handles edge cases (no past context, new attendees)
+- Generated briefs score 7+/10 on usefulness survey
+
+F4: MULTI-CHANNEL NOTIFICATION SYSTEM
+--------------------------------------
+Feature: Deliver meeting reminders via Email and Telegram
+
+Requirements:
+- F4.1: Send email reminders with HTML formatting
+- F4.2: Send Telegram instant messages with markdown formatting
+- F4.3: Include meeting context in notification (purpose, agenda, attendees)
+- F4.4: Insert direct meeting link (one-click join)
+- F4.5: Generate customizable reminder timing (1 day, 1 hour, 15 min before)
+- F4.6: Allow user to set different reminders per meeting type
+- F4.7: Support scheduled notifications (send at optimal time)
+- F4.8: Include action buttons (Join, Snooze, Done, Reschedule)
+- F4.9: Track notification delivery status (sent, delivered, opened)
+- F4.10: Retry mechanism for failed deliveries
+- F4.11: Rate limiting to prevent spamming
+- F4.12: Do not disturb hours (no notifications 10pm-8am)
+
+Implementation Details:
+- Gmail API or SMTP for email delivery (free, unlimited)
+- Telegram Bot API for instant messages (free, unlimited)
+- APScheduler for scheduling future notifications
+- Email templates using Jinja2
+- Telegram inline keyboards for interactive buttons
+- Webhook callbacks to track email opens
+
+Success Criteria:
+- Email delivered within 5 seconds
+- Telegram delivered within 2 seconds
+- 90% of notifications seen by users
+- Zero missed notifications due to system failure
+- User can customize all notification settings
+
+F5: WEB DASHBOARD (FRONTEND)
+------------------------------
+Feature: React/Next.js dashboard for viewing and managing meetings
+
+Requirements:
+- F5.1: User login page (email + password, Google OAuth button)
+- F5.2: Dashboard home (upcoming meetings for today, tomorrow, this week)
+- F5.3: Meeting list view (sortable by date/time, filterable by type)
+- F5.4: Meeting detail view (full context, attendees, link, notes section)
+- F5.5: Edit AI-generated context (allow user to customize)
+- F5.6: Manual note input field (for meeting preparation notes)
+- F5.7: Settings page (notification preferences, timing, channels)
+- F5.8: Calendar sync status (shows last sync time)
+- F5.9: Mobile responsive design (works on phone, tablet, desktop)
+- F5.10: Dark mode and light mode toggle
+- F5.11: Search functionality (find meetings by title, attendee, date)
+- F5.12: Meeting history view (past meetings, notes, outcomes)
+
+Implementation Details:
+- Next.js framework (React + full-stack capabilities)
+- Tailwind CSS for styling (utility-first, responsive)
+- TypeScript for type safety
+- Real-time updates via WebSocket or polling
+- Lazy loading for performance
+- Progressive Web App (PWA) capabilities
+
+Success Criteria:
+- Dashboard loads in under 1 second
+- All pages mobile-responsive
+- Zero JavaScript errors
+- Intuitive navigation without documentation
+- Accessibility score: 90+ (WCAG 2.1 AA)
+
+F6: DATABASE DESIGN AND MANAGEMENT
+-----------------------------------
+Feature: Persistent data storage for users, meetings, context, notifications
+
+Requirements:
+- F6.1: Store user profiles (email, name, timezone, preferences)
+- F6.2: Store OAuth tokens securely (encrypted)
+- F6.3: Store calendar events (title, start/end time, attendees, links)
+- F6.4: Store generated contexts (AI brief, checklist, agenda)
+- F6.5: Store notification history (sent status, timestamps, channel)
+- F6.6: Store meeting notes (user input, action items)
+- F6.7: Store attendee information (email, past interactions)
+- F6.8: Store user preferences and settings
+- F6.9: Efficient querying (indexes on frequently searched columns)
+- F6.10: Data backup and recovery capability
+- F6.11: GDPR compliance (user data deletion capability)
+
+Implementation Details:
+- PostgreSQL primary database (Supabase free tier: 500MB)
+- Alternative: SQLite for local development/testing
+- ChromaDB for vector storage (meeting note embeddings)
+- Redis for caching (optional, if using Supabase)
+- Regular backups (automated daily)
+
+Success Criteria:
+- All queries complete in under 500ms
+- Database size stays within 500MB limit
+- Zero data loss incidents
+- Successful restore from backup within 1 hour
+
+F7: USER PREFERENCES AND CUSTOMIZATION
+--------------------------------------
+Feature: Allow users to customize system behavior
+
+Requirements:
+- F7.1: Notification channel selection (Email, Telegram, both)
+- F7.2: Reminder timing preferences (1 day, 1 hour, 15 min, etc)
+- F7.3: Meeting type classification (user can define custom types)
+- F7.4: Do-not-disturb settings (quiet hours)
+- F7.5: Calendar selection (which calendars to monitor)
+- F7.6: Timezone configuration
+- F7.7: Email signature for email notifications
+- F7.8: Telegram chat ID linking (secure pairing)
+- F7.9: Default meeting prep time (varies by meeting type)
+- F7.10: Export user data (GDPR requirement)
+
+Implementation Details:
+- Settings stored in database
+- Real-time preference updates
+- Default sensible values if not customized
+- User-friendly settings interface (no technical knowledge needed)
+
+Success Criteria:
+- All preferences have sensible defaults
+- Users can customize within 2 minutes
+- Changes take effect immediately
+- No re-authentication needed for preference changes
+
+================================================================================
+SECTION 3: PHASE 2 FEATURES (WEEKS 5-8)
+================================================================================
+
+F8: SMART PATTERN LEARNING
+--------------------------
+Feature: Machine learning to optimize notification timing and suggestions
+
+Requirements:
+- F8.1: Track meeting attendance (joined on time, late, skipped, rescheduled)
+- F8.2: Detect frequently rescheduled meeting slots
+- F8.3: Calculate average preparation time needed per meeting type
+- F8.4: Identify optimal notification timing per user
+- F8.5: Suggest buffer time before important meetings
+- F8.6: Warn of back-to-back meeting conflicts
+- F8.7: Generate weekly summary (meeting count, time spent, productivity)
+- F8.8: Predict meeting outcomes based on attendee patterns
+- F8.9: Learn AI context quality (which prompts generate best briefs)
+- F8.10: Continuously improve recommendations
+
+Implementation Details:
+- Scikit-learn for machine learning models
+- Time-series analysis for pattern detection
+- Weekly batch jobs for model retraining
+- User feedback collection (thumbs up/down on contexts)
+
+Success Criteria:
+- Pattern detection accuracy: 85%+
+- Notification opt-in rate: 80%+ (users actually want the suggestions)
+- 20% improvement in meeting preparation time per user
+
+F9: MEETING PREPARATION AUTOMATION
+----------------------------------
+Feature: Automatically fetch and organize preparation materials
+
+Requirements:
+- F9.1: Search Google Drive for relevant documents
+- F9.2: Fetch recent emails with meeting attendees
+- F9.3: Compile meeting-related files into single view
+- F9.4: Suggest key discussion topics from recent communications
+- F9.5: Generate preparation checklist based on meeting type
+- F9.6: Create pre-meeting calendar block (focus time, no interruptions)
+- F9.7: Auto-block buffer time before meetings (15-30 min prep)
+- F9.8: Manage action items from previous meetings
+- F9.9: Set up post-meeting reminder for notes
+- F9.10: Download meeting materials if needed
+
+Implementation Details:
+- Google Drive API (fetch documents)
+- Gmail API (search recent emails)
+- Calendar API (create prep blocks)
+- Document summarization using Mistral AI
+- Attachment management system
+
+Success Criteria:
+- All prep materials gathered within 5 seconds
+- Users find 90%+ of needed documents automatically
+- Prep time reduced by 50%
+
+F10: POST-MEETING FOLLOW-UP
+---------------------------
+Feature: Capture notes, extract action items, send recaps
+
+Requirements:
+- F10.1: Send post-meeting reminder (within 30 minutes of meeting end)
+- F10.2: Collect meeting notes (text or voice input via Telegram)
+- F10.3: Extract action items automatically using AI
+- F10.4: Assign action items to specific people (where mentioned)
+- F10.5: Extract deadlines mentioned in notes
+- F10.6: Generate meeting recap email
+- F10.7: Send recap to all attendees (if enabled)
+- F10.8: Create tasks in task management system
+- F10.9: Store notes in meeting history for future reference
+- F10.10: Voice-to-text transcription (Telegram voice messages)
+
+Implementation Details:
+- OpenAI Whisper (local, free speech-to-text)
+- Named entity recognition for attendee extraction
+- Regular expressions for date/deadline extraction
+- Action item database for tracking completion
+
+Success Criteria:
+- 70%+ of users capture post-meeting notes
+- AI extracts action items with 90%+ accuracy
+- Recaps sent within 1 minute of notes submission
+
+F11: CALENDAR INTELLIGENCE AND OPTIMIZATION
+-------------------------------------------
+Feature: Smart calendar analysis and conflict resolution
+
+Requirements:
+- F11.1: Detect back-to-back meetings with no breaks
+- F11.2: Identify time conflicts and suggest resolutions
+- F11.3: Calculate total meeting hours per week
+- F11.4: Identify focus time availability (no-meeting blocks)
+- F11.5: Suggest optimal meeting times for new invites
+- F11.6: Block focus time automatically (user-defined hours)
+- F11.7: Warn about travel time requirements (if applicable)
+- F11.8: Prevent double-booking
+- F11.9: Suggest meeting consolidation (multiple small meetings → one)
+- F11.10: Calculate meeting ROI (time investment vs outcomes)
+
+Implementation Details:
+- Calendar analysis algorithms
+- Google Maps API for travel time (free tier)
+- Conflict detection system
+- Recommendation engine
+
+Success Criteria:
+- Conflicts detected with 100% accuracy
+- Suggestions improve user calendar efficiency by 25%
+- Users implement 50%+ of recommendations
+
+================================================================================
+SECTION 4: NON-FUNCTIONAL REQUIREMENTS
+================================================================================
+
+4.1 PERFORMANCE REQUIREMENTS
+
+Response Time:
+- Calendar sync: Complete within 5 seconds (from Google Calendar)
+- AI context generation: Complete within 10 seconds (Mistral local inference)
+- Notification delivery: Sent within 2 seconds (Telegram), 5 seconds (Email)
+- Dashboard page load: Complete within 1 second (initial load < 3 seconds)
+- API response time: 100% of requests under 500ms
+- Database query time: 100% of queries under 250ms
+- Search functionality: Return results within 2 seconds
+
+Throughput:
+- System handles 100+ concurrent users without degradation
+- Process 1000+ meetings per month per user
+- Handle 10000+ notifications per month
+- Support 100+ HTTP requests per second
+
+Resource Utilization:
+- AI model (Mistral): Runs on CPU (8GB RAM minimum)
+- API memory usage: Under 500MB for backend services
+- Database size: Under 500MB (Supabase free tier limit)
+- Disk space: Under 10GB for all services combined
+
+4.2 AVAILABILITY AND RELIABILITY
+
+Uptime:
+- Target: 99% uptime (43 minutes downtime per month)
+- Maintain continuous availability for all background services
+- Support graceful degradation if one component fails
+
+Fault Tolerance:
+- System continues basic operations if AI service fails
+- Notifications retry 3 times if initial delivery fails
+- Automatic failover between Email and Telegram if one fails
+- Database replication or point-in-time recovery capability
+
+Monitoring and Alerting:
+- Real-time error tracking (Sentry free tier)
+- Daily automated health checks
+- Alert on system failures within 5 minutes
+- Log all critical operations for debugging
+
+4.3 SECURITY REQUIREMENTS
+
+Authentication:
+- OAuth 2.0 for Google Calendar (no passwords needed)
+- JWT tokens for session management (expires after 30 days)
+- Secure password storage using bcrypt (if local auth enabled)
+- Option to enable two-factor authentication
+
+Authorization:
+- Users can only access their own calendar and data
+- Role-based access (single user = admin role)
+- API endpoint protection (rate limiting)
+- CSRF protection on all forms
+
+Data Protection:
+- All OAuth tokens encrypted at rest (AES-256)
+- HTTPS mandatory for all connections
+- SSL/TLS certificates (Let's Encrypt free)
+- No plaintext passwords in logs
+- Secure token refresh mechanism
+- Data isolation (users cannot see other users' data)
+
+Privacy:
+- GDPR compliant (data deletion on request)
+- No third-party data sharing (no tracking/analytics requiring consent)
+- Privacy policy clearly stated
+- User consent for data processing
+- Right to download personal data (data portability)
+- Minimal data collection (only what's necessary)
+
+Compliance:
+- Follow OWASP Top 10 security guidelines
+- No hardcoded credentials
+- Regular security code reviews
+- SQL injection prevention (parameterized queries)
+- XSS prevention (input sanitization)
+- CSRF token validation
+
+4.4 SCALABILITY REQUIREMENTS
+
+Horizontal Scaling:
+- Stateless architecture (any server can handle any request)
+- Database can handle 1000+ concurrent users
+- Background job processing can scale (async tasks)
+- No single points of failure
+
+Vertical Scaling:
+- Incrementally increase server resources if needed
+- Cache optimization to reduce database load
+- Query optimization for large datasets
+- Incremental backups to reduce load
+
+Capacity Planning:
+- Support 1000+ active users by end of year 1
+- Handle peak usage (Monday mornings, 9am slot)
+- 100+ meetings per user per month
+- Growth trajectory: 10x users in 2 years
+
+4.5 USABILITY AND ACCESSIBILITY
+
+User Interface:
+- Simple, intuitive design (no training needed)
+- Consistent navigation patterns
+- Clear error messages (guide users to fix problems)
+- Undo/redo functionality where applicable
+- Keyboard shortcuts for power users
+- Responsive design (mobile, tablet, desktop)
+
+Accessibility:
+- WCAG 2.1 Level AA compliance
+- Keyboard-only navigation possible
+- Screen reader compatible
+- Color contrast (4.5:1 for text)
+- Alt text on all images
+- Proper heading hierarchy
+- Form labels clearly associated
+
+Internationalization:
+- Support multiple languages (initially: English, optional Spanish/French)
+- Timezone support (for global users)
+- Date/time formatting (localized to user timezone)
+- Currency/locale support if needed
+
+4.6 MAINTAINABILITY
+
+Code Quality:
+- PEP 8 compliance (Python code style)
+- ESLint configuration (JavaScript/TypeScript)
+- Type hints in Python (mypy)
+- JSDoc comments for functions
+- Meaningful variable names (no cryptic abbreviations)
+
+Documentation:
+- README.md with setup instructions
+- API documentation (OpenAPI/Swagger format)
+- Database schema documentation
+- Architecture decision records (ADRs)
+- Code comments for complex logic
+- User-facing help documentation
+
+Testing:
+- Unit tests: 80%+ code coverage
+- Integration tests for API endpoints
+- End-to-end tests for critical user workflows
+- Automated testing on every commit (CI/CD)
+- Manual testing checklist before releases
+- Performance testing (load testing)
+
+Version Control:
+- Git-based workflow (GitHub)
+- Meaningful commit messages
+- Branch strategy (main, develop, feature branches)
+- Code review process before merging
+- Semantic versioning for releases
+
+4.7 DEPLOYMENT AND OPERATIONS
+
+Deployment Method:
+- Docker containers for all services
+- Docker Compose for local development
+- Heroku or Railway for production (free tier)
+- Environment-based configuration
+- Zero-downtime deployments (if possible)
+
+Configuration Management:
+- Environment variables for secrets
+- Configuration files for settings
+- Feature flags for gradual rollouts
+- CI/CD pipeline automation
+
+Monitoring and Logging:
+- Request logging (all API calls)
+- Error logging (exceptions, failures)
+- Performance metrics (response times, throughput)
+- User activity tracking (non-personal data)
+- Daily monitoring reports
+- Alert thresholds defined
+
+Backup and Recovery:
+- Daily automated database backups
+- Point-in-time recovery capability
+- Off-site backup storage
+- Tested recovery procedures
+- Recovery time objective (RTO): 1 hour
+- Recovery point objective (RPO): 1 hour
+
+================================================================================
+SECTION 5: DESIGN REQUIREMENTS
+================================================================================
+
+5.1 SYSTEM ARCHITECTURE OVERVIEW
+
+High-Level Architecture:
+
+  ┌─────────────────────────────────────────────────────────────┐
+  │                      FRONTEND LAYER                         │
+  │  Next.js/React Dashboard + Mobile Responsive UI             │
+  │  (Login, Calendar View, Settings, Meeting Details)          │
+  └────────────────────┬────────────────────────────────────────┘
+                       │ HTTPS
+  ┌────────────────────▼────────────────────────────────────────┐
+  │                    API GATEWAY LAYER                        │
+  │  FastAPI / REST Endpoints                                   │
+  │  (Authentication, Routes, Rate Limiting)                    │
+  └────────────────────┬────────────────────────────────────────┘
+                       │
+       ┌───────────────┼───────────────┐
+       │               │               │
+       v               v               v
+  ┌──────────┐  ┌──────────┐  ┌──────────┐
+  │ Services │  │  Agents  │  │ Database │
+  │  Layer   │  │  Layer   │  │  Layer   │
+  └──────────┘  └──────────┘  └──────────┘
+
+5.2 COMPONENT BREAKDOWN
+
+Frontend Components:
+- Authentication Module (Login, OAuth, Registration)
+- Dashboard Module (Calendar view, meeting list)
+- Meeting Detail Module (Full context, notes, actions)
+- Settings Module (Preferences, channel configuration)
+- Navigation Module (Sidebar, breadcrumbs)
+- UI Components (Cards, buttons, modals, forms)
+
+Backend Components:
+- Authentication Service (JWT, OAuth token management)
+- Calendar Service (Calendar API integration, sync logic)
+- Notification Service (Email, Telegram delivery)
+- AI Service (Mistral integration, context generation)
+- Task Service (Background job processing)
+- Database Service (CRUD operations)
+
+Agent Components:
+- Monitor Agent (Calendar polling, change detection)
+- Context Agent (AI context generation)
+- Notification Agent (Multi-channel delivery)
+- Learning Agent (Pattern analysis, optimization)
+- Action Agent (Automation, preparation)
+
+External Integrations:
+- Google Calendar API (calendar data)
+- Gmail API (email fetching and sending)
+- Telegram Bot API (instant messaging)
+- Ollama/Mistral API (local AI inference)
+
+5.3 DATA FLOW DIAGRAM
+
+New Meeting Event Flow:
+1. User creates event in Google Calendar
+2. Google Calendar webhook triggers
+3. Monitor Agent receives notification
+4. Monitor Agent fetches event details from API
+5. Event stored in database
+6. Context Agent triggered (query history, fetch emails, generate AI brief)
+7. Context stored in database
+8. Notification Agent triggered (schedule email and telegram)
+9. Notification times are scheduled in system queue
+10. At scheduled time, emails sent via Gmail API
+11. At scheduled time, Telegram message sent via Bot API
+12. Delivery status recorded in database
+13. Learning Agent processes patterns asynchronously
+
+5.4 TECHNOLOGY SELECTION RATIONALE
+
+Frontend: Next.js + React + TypeScript
+Rationale:
+- Full-stack framework (reduces complexity)
+- Server-side rendering (improves performance)
+- Static site generation (reduces server load)
+- Large ecosystem and community support
+- TypeScript for type safety
+- Seamless deployment to Vercel (free tier)
+- Great developer experience
+
+Backend: Python + FastAPI
+Rationale:
+- FastAPI has excellent async support (multi-agent system needs this)
+- Python ecosystem rich in AI/ML libraries (Mistral, scikit-learn)
+- Simple and elegant syntax
+- Built-in documentation (Swagger)
+- Async/await for background tasks
+- Easy integration with Ollama (local AI)
+- Lower resource requirements than Node.js
+
+AI Services: Mistral 7B via Ollama (Local)
+Rationale:
+- Completely free (no API costs)
+- Privacy-first (data never leaves local machine)
+- Fast inference on consumer hardware (7B model very suitable)
+- No rate limiting or quota worries
+- Works without internet connection
+- Good quality output for context generation
+- Active community and documentation
+
+Database: PostgreSQL (Supabase free tier)
+Rationale:
+- Free tier: 500MB storage (sufficient for MVP)
+- Powerful query capabilities
+- Built-in vector support (for embeddings)
+- ACID transactions (data integrity)
+- Easy backup and restore
+- Excellent documentation
+- Scales vertically if needed
+
+Vector Database: ChromaDB (Local)
+Rationale:
+- Open source, completely free
+- Runs locally within Python (no additional service)
+- Built-in embeddings (all-MiniLM-L6-v2)
+- Perfect for small-scale semantic search
+- Easy integration with Python backend
+
+Hosting: Vercel (Frontend) + Railway/Heroku (Backend)
+Rationale:
+- Free tier for both
+- Automatic SSL certificates
+- CI/CD pipeline included
+- Easy GitHub integration
+- Environment variables management
+- Scale within free limits
+- No credit card required for open source projects
+
+5.5 ENTITY RELATIONSHIP DIAGRAM
+
+User Entity:
+- user_id (PK)
+- email (unique)
+- name
+- timezone
+- created_at
+- updated_at
+- google_token (encrypted)
+- telegram_chat_id
+- preferences_json (settings)
+
+Meeting Entity:
+- meeting_id (PK)
+- user_id (FK)
+- event_id (Google Calendar event ID)
+- title
+- start_time
+- end_time
+- attendees_list
+- meeting_link
+- description
+- calendar_id
+- created_at
+- synced_at
+
+Context Entity:
+- context_id (PK)
+- meeting_id (FK)
+- ai_brief (text)
+- meeting_type (classified)
+- key_topics (array)
+- action_items (array)
+- preparation_checklist (array)
+- generated_at
+- model_version
+
+Notification Entity:
+- notification_id (PK)
+- meeting_id (FK)
+- channel (email/telegram/whatsapp)
+- scheduled_time
+- sent_time (nullable)
+- delivered_time (nullable)
+- opened_time (nullable)
+- status (scheduled/sent/delivered/failed)
+- retry_count
+- error_message (if failed)
+
+AttendeeInfo Entity:
+- attendee_id (PK)
+- user_id (FK)
+- attendee_email
+- attendee_name
+- last_interaction
+- meeting_count
+- notes
+
+================================================================================
+SECTION 6: FRONTEND ARCHITECTURE AND TECHNOLOGY
+================================================================================
+
+6.1 FRONTEND TECH STACK
+
+Framework: Next.js 14 (Latest stable)
+UI Library: React 18
+Styling: Tailwind CSS
+Type System: TypeScript
+State Management: Context API + Zustand (if needed)
+HTTP Client: Axios or Fetch API
+Form Handling: React Hook Form
+Validation: Zod schema validation
+
+6.2 PROJECT STRUCTURE
+
+Frontend/
+├── public/
+│   ├── icons/
+│   └── images/
+├── src/
+│   ├── app/
+│   │   ├── page.tsx (landing page)
+│   │   ├── dashboard/
+│   │   │   ├── page.tsx (dashboard home)
+│   │   │   ├── meeting/[id]/page.tsx (meeting details)
+│   │   │   └── layout.tsx
+│   │   ├── settings/
+│   │   │   ├── page.tsx (settings page)
+│   │   │   └── layout.tsx
+│   │   └── auth/
+│   │       ├── login/page.tsx
+│   │       └── callback/page.tsx
+│   ├── components/
+│   │   ├── common/
+│   │   │   ├── Header.tsx
+│   │   │   ├── Sidebar.tsx
+│   │   │   └── Footer.tsx
+│   │   ├── dashboard/
+│   │   │   ├── MeetingCard.tsx
+│   │   │   ├── MeetingList.tsx
+│   │   │   └── MeetingFilter.tsx
+│   │   ├── ui/
+│   │   │   ├── Button.tsx
+│   │   │   ├── Card.tsx
+│   │   │   └── Modal.tsx
+│   │   └── forms/
+│   │       ├── LoginForm.tsx
+│   │       └── SettingsForm.tsx
+│   ├── services/
+│   │   ├── api.ts (API client)
+│   │   ├── auth.ts (Auth logic)
+│   │   └── calendar.ts (Calendar operations)
+│   ├── hooks/
+│   │   ├── useAuth.ts
+│   │   ├── useMeetings.ts
+│   │   └── useNotifications.ts
+│   ├── store/
+│   │   ├── authStore.ts
+│   │   └── meetingStore.ts
+│   ├── types/
+│   │   ├── user.ts
+│   │   ├── meeting.ts
+│   │   └── notification.ts
+│   ├── utils/
+│   │   ├── dates.ts
+│   │   ├── formatting.ts
+│   │   └── constants.ts
+│   ├── config/
+│   │   └── env.ts
+│   └── styles/
+│       └── globals.css
+├── .env.example
+├── next.config.js
+├── tailwind.config.js
+├── tsconfig.json
+└── package.json
+
+6.3 KEY FRONTEND FEATURES
+
+Authentication Flow:
+1. User clicks "Sign in with Google" button
+2. OAuth 2.0 redirect to Google
+3. User grants calendar permission
+4. Redirect back to app with auth code
+5. Backend verifies and issues JWT token
+6. Token stored in secure HTTP-only cookie
+7. User redirected to dashboard
+
+Meeting List Display:
+- Fetch meetings from backend API
+- Display in chronological order
+- Show meeting title, time, attendees
+- Truncate long descriptions
+- Add icons for meeting type (no emojis, use SVG icons)
+- Loading states and error handling
+- Real-time updates via polling (every 30 seconds)
+
+Meeting Detail View:
+- Full meeting information
+- AI-generated context (brief, agenda, prep items)
+- Attendee list with past interaction history
+- Meeting link (clickable, opens new tab)
+- Edit context button (opens modal)
+- Add notes textarea
+- Save changes with confirmation
+- Show generated timestamp and AI model version
+
+Settings Interface:
+- Notification channel toggles (Email, Telegram)
+- Reminder timing inputs (multiple reminders)
+- Calendar selection checkboxes
+- Timezone selection dropdown
+- Do-not-disturb time pickers
+- Google account link/unlink
+- Telegram account link (QR code or manual link)
+- Save button (confirmation on save)
+- Data export button (GDPR)
+
+6.4 RESPONSIVE DESIGN STRATEGY
+
+Mobile (< 768px):
+- Single column layout
+- Full-width components
+- Bottom navigation bar
+- Larger touch targets (minimum 44px)
+- Simplified forms
+- Hide secondary information
+
+Tablet (768px - 1024px):
+- Two column layout
+- Sidebar collapsible
+- Medium-sized components
+- All information visible
+
+Desktop (> 1024px):
+- Three column layout (sidebar, main, optional detail panel)
+- Full feature set visible
+- Compact components
+- Keyboard shortcuts available
+- Hover effects on interactive elements
+
+6.5 PERFORMANCE OPTIMIZATION
+
+Code Splitting:
+- Lazy load dashboard pages
+- Lazy load settings modals
+- Separate bundle for auth flow
+
+Caching:
+- Cache meeting list for 5 minutes
+- Cache user settings (invalidate on change)
+- Browser cache for static assets (1 year)
+
+Image Optimization:
+- Use WebP format with fallbacks
+- Lazy load images
+- Compress all images before deployment
+- Use SVG for icons (scalable, smaller)
+
+Bundle Size:
+- Target: < 300KB gzipped
+- Monitor with next/bundle-analyzer
+- Minify CSS and JavaScript
+- Remove unused dependencies
+
+================================================================================
+SECTION 7: BACKEND ARCHITECTURE AND TECHNOLOGY
+================================================================================
+
+7.1 BACKEND TECH STACK
+
+Framework: FastAPI (Python 3.11+)
+Web Server: Uvicorn
+Package Manager: pip + virtual environment (or Poetry)
+Async Tasks: Celery or APScheduler
+Database Driver: asyncpg (PostgreSQL)
+Vector DB: ChromaDB
+Email: smtplib or Gmail API
+Telegram: python-telegram-bot
+AI/ML: Ollama client
+Data Validation: Pydantic
+Environment Management: python-dotenv
+Monitoring: Python logging + Sentry (free tier)
+
+7.2 PROJECT STRUCTURE
+
+Backend/
+├── app/
+│   ├── __init__.py
+│   ├── main.py (FastAPI app initialization)
+│   ├── config.py (environment config)
+│   ├── api/
+│   │   ├── v1/
+│   │   │   ├── routes/
+│   │   │   │   ├── auth.py (login, register, oauth)
+│   │   │   │   ├── calendar.py (sync, fetch, webhook)
+│   │   │   │   ├── meetings.py (CRUD operations)
+│   │   │   │   ├── context.py (get, update context)
+│   │   │   │   ├── notifications.py (preferences, delivery)
+│   │   │   │   └── settings.py (user settings)
+│   │   │   └── dependencies.py (auth dependencies, etc)
+│   ├── models/
+│   │   ├── user.py (database models)
+│   │   ├── meeting.py
+│   │   ├── context.py
+│   │   ├── notification.py
+│   │   └── __init__.py
+│   ├── schemas/
+│   │   ├── user.py (Pydantic schemas)
+│   │   ├── meeting.py
+│   │   ├── context.py
+│   │   └── __init__.py
+│   ├── services/
+│   │   ├── calendar_service.py (Calendar API integration)
+│   │   ├── auth_service.py (OAuth, JWT)
+│   │   ├── email_service.py (Email sending)
+│   │   ├── telegram_service.py (Telegram bot)
+│   │   ├── ai_service.py (Mistral/Ollama)
+│   │   └── __init__.py
+│   ├── agents/
+│   │   ├── orchestrator.py (main agent coordinator)
+│   │   ├── monitor_agent.py (calendar monitor)
+│   │   ├── context_agent.py (AI context generation)
+│   │   ├── notification_agent.py (multi-channel delivery)
+│   │   ├── learning_agent.py (pattern analysis)
+│   │   ├── action_agent.py (automation)
+│   │   └── __init__.py
+│   ├── database/
+│   │   ├── database.py (connection management)
+│   │   ├── models.py (SQLAlchemy models)
+│   │   └── schemas.py
+│   ├── utils/
+│   │   ├── security.py (encryption, hashing)
+│   │   ├── decorators.py (custom decorators)
+│   │   ├── logging.py (logging setup)
+│   │   └── validators.py (validation helpers)
+│   ├── middleware/
+│   │   ├── auth_middleware.py (JWT validation)
+│   │   ├── error_handler.py (exception handling)
+│   │   └── rate_limit.py (rate limiting)
+│   └── tasks/
+│       ├── scheduled_tasks.py (APScheduler jobs)
+│       ├── background_tasks.py (Celery tasks)
+│       └── __init__.py
+├── tests/
+│   ├── unit/
+│   │   ├── test_auth.py
+│   │   ├── test_calendar.py
+│   │   └── __init__.py
+│   ├── integration/
+│   │   ├── test_api.py
+│   │   └── __init__.py
+│   └── conftest.py (pytest configuration)
+├── requirements.txt
+├── .env.example
+├── docker/
+│   └── Dockerfile
+├── docker-compose.yml
+├── pytest.ini
+└── README.md
+
+7.3 CORE SERVICE IMPLEMENTATIONS
+
+Authentication Service (auth_service.py):
+- OAuth 2.0 flow with Google
+- Token generation (JWT)
+- Token refresh logic
+- Token validation
+- Password hashing (bcrypt)
+- User session management
+- Two-factor authentication (optional)
+
+Calendar Service (calendar_service.py):
+- Google Calendar API integration
+- OAuth token refresh
+- Fetch calendar list
+- Fetch events (next 7 days)
+- Parse event details
+- Handle recurring events
+- Webhook listener setup
+- Error handling and retries
+
+Notification Service (notification_service.py):
+- Email sending (Gmail API / SMTP)
+- Telegram message sending
+- WhatsApp message sending (Twilio free)
+- Message template rendering
+- Scheduling logic
+- Delivery tracking
+- Retry mechanism
+- Rate limiting
+
+AI Service (ai_service.py):
+- Ollama/Mistral client
+- Prompt management
+- Context generation
+- Streaming responses
+- Error handling
+- Model version tracking
+- Performance monitoring
+
+Email Service (email_service.py):
+- SMTP configuration (Gmail)
+- HTML template rendering
+- Attachment handling
+- Calendar .ics file generation
+- Delivery confirmation
+- Bounce handling
+- Unsubscribe links (if needed)
+
+Telegram Service (telegram_service.py):
+- Bot setup and configuration
+- Message sending
+- Inline keyboard buttons
+- Command handling
+- Update polling
+- Webhook setup (optional)
+- Rate limiting
+- Error handling
+
+7.4 MULTI-AGENT SYSTEM ARCHITECTURE
+
+Orchestrator Agent:
+- Central coordinator for all agents
+- Manages task queue (asyncio.Queue or Redis)
+- Distributes work to other agents
+- Handles agent failures and retries
+- Provides inter-agent communication interface
+
+Monitor Agent:
+- Runs continuously (background process)
+- Polls Google Calendar every 15 minutes
+- Listens to webhook notifications
+- Detects new/updated/deleted events
+- Filters relevant events
+- Queues tasks for Context Agent
+
+Context Agent:
+- Triggered by events from Monitor Agent
+- Queries past meetings (database + vector search)
+- Fetches recent emails (Gmail API)
+- Generates AI prompt
+- Calls Mistral model for inference
+- Stores context in database
+- Triggers Notification Agent
+
+Notification Agent:
+- Triggered by Context Agent
+- Calculates notification times
+- Formats messages (HTML email, Markdown Telegram)
+- Schedules delivery via APScheduler
+- Tracks delivery status
+- Triggers retries on failure
+
+Learning Agent:
+- Runs daily (scheduled background job)
+- Analyzes meeting patterns
+- Calculates statistics
+- Updates user profile
+- Generates insights
+- Improves recommendations
+
+Action Agent:
+- Triggered by Context Agent
+- Searches Google Drive for relevant documents
+- Fetches recent emails with attendees
+- Creates calendar prep blocks
+- Manages task creation
+- Post-meeting reminder logic
+
+7.5 API ENDPOINT SPECIFICATIONS
+
+Authentication Endpoints:
+POST /api/v1/auth/login
+- Input: email, password
+- Output: JWT token, refresh token
+- Error handling: Invalid credentials, user not found
+
+POST /api/v1/auth/register
+- Input: email, password, name
+- Output: User object, JWT token
+- Validation: Email format, password strength
+
+POST /api/v1/auth/google-callback
+- Input: Google auth code
+- Output: JWT token, user info
+- Side effects: Create user if not exists, store token
+
+POST /api/v1/auth/refresh
+- Input: Refresh token
+- Output: New JWT token
+- Error handling: Token expired, invalid token
+
+POST /api/v1/auth/logout
+- Input: JWT token
+- Output: Success message
+- Side effects: Invalidate token
+
+Calendar Endpoints:
+GET /api/v1/calendar/sync
+- Description: Trigger manual calendar sync
+- Output: Sync status, events count
+- Auth: Required JWT
+
+GET /api/v1/calendar/events
+- Description: Fetch upcoming events
+- Query params: days (default 7), calendar_id (optional)
+- Output: Array of events
+- Pagination: limit, offset
+
+GET /api/v1/calendar/events/{event_id}
+- Description: Get specific event details
+- Output: Event object with context
+- Auth: Required JWT
+
+POST /api/v1/calendar/webhook
+- Description: Google Calendar webhook endpoint
+- Input: Webhook notification data
+- Output: Success message
+- Auth: Webhook secret validation
+
+Meeting Endpoints:
+GET /api/v1/meetings
+- Description: Get all meetings for user
+- Query params: filter, sort, limit, offset
+- Output: Meeting objects array
+
+GET /api/v1/meetings/{meeting_id}
+- Description: Get meeting with full context
+- Output: Meeting object with context, attendees, notes
+
+PUT /api/v1/meetings/{meeting_id}
+- Description: Update meeting (notes, context)
+- Input: Updated fields
+- Output: Updated meeting object
+
+POST /api/v1/meetings/{meeting_id}/notes
+- Description: Add post-meeting notes
+- Input: Notes text
+- Output: Extracted action items
+
+Context Endpoints:
+GET /api/v1/context/{meeting_id}
+- Description: Get AI-generated context
+- Output: Context object (brief, agenda, checklist)
+
+PUT /api/v1/context/{meeting_id}
+- Description: Update context (user edits)
+- Input: Updated context fields
+- Output: Updated context object
+
+Notification Endpoints:
+GET /api/v1/notifications/preferences
+- Description: Get user notification settings
+- Output: Preferences object
+
+PUT /api/v1/notifications/preferences
+- Description: Update notification settings
+- Input: Preferences object
+- Output: Updated preferences
+
+POST /api/v1/notifications/telegram/link
+- Description: Link Telegram account
+- Input: Telegram user ID (from bot command)
+- Output: Link success message
+
+Settings Endpoints:
+GET /api/v1/settings
+- Description: Get user settings
+- Output: Settings object
+
+PUT /api/v1/settings
+- Description: Update user settings
+- Input: Updated settings
+- Output: Updated settings
+
+POST /api/v1/export-data
+- Description: Export user data (GDPR)
+- Output: JSON file of all user data
+
+7.6 ERROR HANDLING STRATEGY
+
+HTTP Status Codes:
+- 200: Success
+- 201: Created
+- 204: No content
+- 400: Bad request
+- 401: Unauthorized
+- 403: Forbidden
+- 404: Not found
+- 429: Too many requests (rate limit)
+- 500: Internal server error
+- 503: Service unavailable
+
+Error Response Format:
+{
+  "error": "error_code",
+  "message": "Human readable error message",
+  "timestamp": "ISO 8601 timestamp",
+  "request_id": "Unique request ID for debugging"
+}
+
+Exception Handling:
+- Custom exception classes for different error types
+- Exception middleware catches all exceptions
+- Logs exceptions with full traceback
+- Sends error response to client
+- Alerts on critical errors (email to admin)
+- Graceful degradation (fallback behavior)
+
+7.7 BACKGROUND TASKS AND SCHEDULING
+
+APScheduler Jobs:
+- Calendar sync every 15 minutes
+- Learning agent analysis daily at 2am UTC
+- Notification delivery (scheduled at specific times)
+- Database cleanup (remove old logs every day)
+- Health checks every 5 minutes
+
+Celery Tasks (if scale requires):
+- Context generation (offload heavy computation)
+- Email sending (delivery at specific time)
+- PDF export generation
+- Batch data processing
+
+Task Retry Strategy:
+- Linear backoff: wait 30s, 60s, 90s
+- Maximum 3 retry attempts
+- Log retry attempts
+- Alert on final failure
+
+================================================================================
+SECTION 8: AI MODEL AND AGENTS
+================================================================================
+
+8.1 AI MODEL SELECTION: MISTRAL 7B
+
+Model Choice: Mistral-7B-Instruct-v0.2
+Downloaded via: Ollama (ollama.com)
+
+Specifications:
+- Model size: 7 billion parameters
+- Memory requirement: Minimum 8GB RAM (16GB recommended)
+- CPU only (no GPU required, but GPU optional for faster inference)
+- Inference speed: 5-10 tokens per second on CPU
+- Context window: 32K tokens (covers long meeting histories)
+- License: Apache 2.0 (fully open source)
+- Training data cutoff: April 2024
+
+Why Mistral 7B:
+
+Cost: Zero (self-hosted, no API calls)
+Quality: Superior to LLaMA 7B, competitive with Llama 2 13B
+Speed: Fast enough for interactive use (9 sec generation acceptable)
+Resource efficiency: Runs on consumer hardware
+Community: Active community, many optimizations available
+Capabilities: Excellent for text understanding and generation
+Task fit: Perfect for meeting context generation
+
+Alternative Models (if Mistral underperforms):
+- Llama 2 7B: Similar performance, slightly different tuning
+- Neural Chat 7B: Optimized for conversation
+- Orca 2 7B: Slightly larger, better reasoning
+- Zephyr 7B: Fine-tuned for better instruction following
+
+8.2 MISTRAL SETUP VIA OLLAMA
+
+Installation:
+
+1. Download Ollama from ollama.com (free)
+2. Install for Windows/Mac/Linux
+3. Open terminal and run: ollama pull mistral
+4. Verify: ollama list
+5. Run: ollama serve (background service)
+
+Ollama Architecture:
+- Ollama server runs on localhost:11434
+- Provides REST API for inferencing
+- Manages model loading and caching
+- Automatic quantization (4-bit, 8-bit)
+- GPU support (if available)
+
+Python Integration:
+```
+from ollama import Client
+
+client = Client(host='http://localhost:11434')
+
+response = client.generate(
+    model='mistral',
+    prompt='Your prompt here',
+    stream=False
+)
+
+output = response['response']
+```
+
+8.3 PROMPT ENGINEERING SPECIFICATIONS
+
+Meeting Context Task:
+
+System Prompt:
+You are an expert meeting assistant. Generate a professional meeting brief
+based on the provided meeting details and historical context. Your brief
+should be concise, actionable, and help the attendee prepare effectively.
+
+Include:
+1. Meeting purpose (1 sentence)
+2. Key topics (3-5 bullet points)
+3. Attendee context (relevant background)
+4. Preparation checklist (3-5 items)
+5. Expected outcomes (what success looks like)
+
+Keep the total output under 300 words. Use clear, professional language.
+
+User Prompt Template:
+Meeting Title: [TITLE]
+Date/Time: [DATE_TIME]
+Attendees: [ATTENDEE_LIST]
+Description: [DESCRIPTION]
+
+Previous meeting (if any):
+[PREVIOUS_CONTEXT]
+
+Recent emails with attendees:
+[EMAIL_SUMMARIES]
+
+Generate the meeting brief:
+
+Output Format Template:
+Purpose: [Single sentence about meeting goal]
+
+Key Topics:
+- [Topic 1]: [Brief explanation]
+- [Topic 2]: [Brief explanation]
+- [Topic 3]: [Brief explanation]
+
+Attendee Context:
+[Name]: [Relevant background/role]
+[Name]: [Relevant background/role]
+
+Preparation Checklist:
+[] [Action item 1]
+[] [Action item 2]
+[] [Action item 3]
+
+Expected Outcomes:
+After this meeting, we should have: [Outcome 1], [Outcome 2], [Outcome 3]
+
+8.4 PROMPT OPTIMIZATION
+
+Classification Task (Meeting Type):
+Classify this meeting into ONE category: 1-on-1, Team Sync, Client Call,
+Brainstorm, Status Update, Interview, Training, Other
+
+Input: [Meeting title and description]
+Output: [Category name]
+
+Action Item Extraction:
+Extract action items from the meeting notes below. For each item, identify:
+1. What needs to be done
+2. Who is responsible
+3. When it's due (if mentioned)
+
+Format each as: [ACTION] by [PERSON] - [DUE_DATE]
+
+Notes: [TEXT]
+
+Email Summarization:
+Briefly summarize the following email in 1-2 sentences, focusing on
+relevance to the upcoming meeting.
+
+Email: [TEXT]
+
+Summary: [OUTPUT]
+
+Prompt Temperature and Parameters:
+- Temperature: 0.7 (balance creativity and consistency)
+- Top-p: 0.95 (nucleus sampling)
+- Max tokens: 500 (prevent overly long outputs)
+- Repeat penalty: 1.1 (avoid repetition)
+
+8.5 AGENT SPECIFICATIONS
+
+Agent #1: Monitor Agent
+Responsibility: Detect calendar events and changes
+Trigger: Every 15 minutes or webhook event
+Input: Google Calendar API response
+Output: Event object queued for Context Agent
+
+Process:
+1. Fetch calendar events from API
+2. Compare with cached version
+3. Identify new events (new event_id)
+4. Identify updated events (modified timestamp)
+5. Identify cancelled events (declined or deleted)
+6. Filter out irrelevant events (tentative, declined)
+7. Queue new events for context generation
+
+Error Handling:
+- If API fails: retry after 5 minutes
+- If network error: log and continue at next cycle
+- If authentication fails: alert user, pause sync
+
+Agent #2: Context Agent
+Responsibility: Generate AI-powered meeting context
+Trigger: New event from Monitor Agent
+Input: Event object, user history, emails
+Output: Context object with AI-generated brief
+
+Process:
+1. Receive event object from Monitor Agent
+2. Extract event details (title, attendees, time, description)
+3. Query database for past meetings with same attendees
+4. Search vector DB for similar meeting notes (embeddings)
+5. Fetch recent emails with attendees (Gmail API)
+6. Build comprehensive prompt with all context
+7. Call Mistral model for inference
+8. Parse response and structure context object
+9. Store context in database
+10. Queue for Notification Agent
+
+Context Object Structure:
+{
+  meeting_id: UUID,
+  brief: "Generated brief text",
+  meeting_type: "client_call",
+  key_topics: ["Topic 1", "Topic 2", ...],
+  checklist: ["Action 1", "Action 2", ...],
+  attendee_notes: {name: "context", ...},
+  generated_at: ISO_TIMESTAMP,
+  model_version: "mistral-7b-0.2",
+  confidence_score: 0.95
+}
+
+Error Handling:
+- If Mistral model fails: use template-based fallback
+- If Gmail API fails: proceed with limited context
+- If database fails: retry up to 3 times
+
+Agent #3: Notification Agent
+Responsibility: Send reminders via Email and Telegram
+Trigger: Context generated
+Input: Meeting object, Context object, User preferences
+Output: Delivery status for each notification
+
+Process:
+1. Receive context from Context Agent
+2. Get user notification preferences
+3. Calculate notification times based on preferences
+4. For each notification time:
+   a. Create email message (HTML template)
+   b. Create Telegram message (markdown)
+   c. Schedule delivery via APScheduler
+   d. Store notification record in database
+5. At scheduled time:
+   a. Send email via Gmail API
+   b. Send Telegram via Bot API
+   c. Record delivery timestamp
+   d. Log delivery status
+
+Notification Timing:
+- Default: 1 day before, 1 hour before, 15 min before
+- User customizable
+- Respect do-not-disturb hours
+
+Error Handling:
+- If email fails: retry 2 times (5 min apart)
+- If Telegram fails: retry 2 times (3 min apart)
+- If both fail: store in queue for retry (up to 24 hours)
+
+Agent #4: Learning Agent
+Responsibility: Analyze patterns and optimize system
+Trigger: Daily at 2am UTC
+Input: Historical meeting data, user interactions
+Output: Updated user profile, insights, recommendations
+
+Process:
+1. Fetch past 90 days of meeting data
+2. Analyze attendance patterns
+3. Calculate preparation time needed per meeting type
+4. Detect frequently rescheduled slots
+5. Calculate optimal notification timing
+6. Identify back-to-back meeting risks
+7. Generate weekly summary statistics
+8. Update user profile with learned behaviors
+9. Configure optimized notification times
+10. Log insights for dashboard display
+
+Learning Metrics Tracked:
+- Meetings rescheduled (by day, time, attendee)
+- Average preparation time spent per meeting type
+- Notification engagement (opened, clicked)
+- Meeting attendance rate
+- Meeting duration vs scheduled time
+- Back-to-back meeting frequency
+- Focus time availability
+
+Error Handling:
+- If analysis fails: skip that cycle, log error
+- If data insufficient: wait for more data before analysis
+- If output invalid: use previous values
+
+Agent #5: Action Agent
+Responsibility: Automate meeting preparation
+Trigger: Context generated
+Input: Meeting object, Context object
+Output: Prepared resources (documents, tasks, calendar blocks)
+
+Process (Pre-meeting):
+1. Receive context from Context Agent
+2. Search Google Drive for relevant documents
+3. Rank documents by relevance score
+4. Fetch top 5 results
+5. Create calendar prep block (30 min before meeting)
+6. Query recent emails with attendees
+7. Summarize email threads relevant to meeting
+8. Create task reminders from action items
+9. Store all resources in context
+
+Process (Post-meeting):
+1. Send note-taking reminder (30 min after meeting)
+2. Wait for user input (30 min timeout)
+3. Transcribe voice notes (if provided)
+4. Extract action items using AI
+5. Create tasks for each action item
+6. Assign to responsible people
+7. Set due dates
+8. Generate meeting recap
+
+Error Handling:
+- If Drive API fails: proceed with available context
+- If task creation fails: store for manual creation
+- If email fetch fails: use cached context
+
+8.6 AGENT COMMUNICATION PROTOCOL
+
+Message Format (Inter-agent):
+{
+  source_agent: "monitor",
+  target_agent: "context",
+  message_type: "event_detected",
+  payload: {
+    event_id: "uuid",
+    event_data: {...}
+  },
+  timestamp: "ISO_8601",
+  retry_count: 0,
+  priority: "high"
+}
+
+Communication Queue (asyncio.Queue):
+- Queue size: unlimited
+- Processing: First In, First Out (FIFO)
+- Async processing with error handling
+- Persistent logging of all messages
+
+Orchestrator Routing Rules:
+- Monitor Agent output → Context Agent input
+- Context Agent output → Notification Agent + Action Agent (parallel)
+- Action Agent output → stored in database
+- Learning Agent runs independently (daily batch)
+
+State Management:
+- Shared state: Database (with transaction support)
+- Distributed state: Not needed for MVP (single instance)
+- Session state: Cached in memory (timeout 1 hour)
+
+================================================================================
+SECTION 9: DATABASE SPECIFICATIONS
+================================================================================
+
+9.1 DATABASE CHOICE: PostgreSQL (SUPABASE FREE TIER)
+
+Database Provider: Supabase (managed PostgreSQL)
+Plan: Free tier
+Storage: 500MB
+Backup: Automatic daily backups
+Replication: Read replicas available (paid)
+SSL/TLS: Included
+Connection pooling: PgBouncer included
+
+Connection String Template:
+postgresql://user:password@host:port/database?sslmode=require
+
+9.2 SCHEMA DESIGN
+
+Table: users
+Columns:
+- id (UUID, PK) - Primary key
+- email (VARCHAR 255, UNIQUE, NOT NULL) - User email
+- name (VARCHAR 255, NOT NULL) - User full name
+- timezone (VARCHAR 50, DEFAULT 'UTC') - User timezone
+- password_hash (VARCHAR 255) - Hashed password (if local auth)
+- google_token (BYTEA) - Encrypted Google OAuth token
+- google_token_expiry (TIMESTAMP) - Token expiration time
+- telegram_chat_id (BIGINT, NULLABLE) - Telegram user ID
+- telegram_verified (BOOLEAN, DEFAULT FALSE) - Telegram link status
+- preferences (JSONB) - User preferences (notification settings, etc)
+- created_at (TIMESTAMP, DEFAULT NOW())
+- updated_at (TIMESTAMP, DEFAULT NOW())
+- deleted_at (TIMESTAMP, NULLABLE) - Soft delete
+
+Indexes:
+- idx_users_email
+- idx_users_telegram_chat_id
+
+Table: meetings
+Columns:
+- id (UUID, PK)
+- user_id (UUID, FK -> users.id)
+- event_id (VARCHAR 255) - Google Calendar event ID
+- title (VARCHAR 500, NOT NULL)
+- description (TEXT)
+- start_time (TIMESTAMP WITH TIME ZONE, NOT NULL)
+- end_time (TIMESTAMP WITH TIME ZONE, NOT NULL)
+- attendees (JSONB) - Array of attendee objects {email, name, optional: notes}
+- meeting_link (VARCHAR 500) - Zoom/Meet/Teams link
+- meeting_platform (VARCHAR 50) - zoom, google_meet, teams, other
+- calendar_id (VARCHAR 255) - Google Calendar ID
+- is_confirmed (BOOLEAN, DEFAULT TRUE) - User accepted
+- is_cancelled (BOOLEAN, DEFAULT FALSE) - Meeting cancelled
+- context_generated (BOOLEAN, DEFAULT FALSE)
+- notes (TEXT) - User's post-meeting notes
+- created_at (TIMESTAMP, DEFAULT NOW())
+- updated_at (TIMESTAMP, DEFAULT NOW())
+- synced_at (TIMESTAMP) - Last sync from Google
+
+Indexes:
+- idx_meetings_user_id
+- idx_meetings_start_time
+- idx_meetings_event_id
+- idx_meetings_user_start (composite)
+
+Table: contexts
+Columns:
+- id (UUID, PK)
+- meeting_id (UUID, FK -> meetings.id)
+- ai_brief (TEXT) - Generated meeting brief
+- meeting_type (VARCHAR 50) - client_call, team_sync, 1on1, brainstorm, etc
+- key_topics (JSONB) - Array of topic strings
+- preparation_checklist (JSONB) - Array of checklist items {item, completed}
+- attendee_context (JSONB) - Background on each attendee
+- action_items_from_last (JSONB) - Previous action items (if recurring)
+- generated_at (TIMESTAMP, DEFAULT NOW())
+- ai_model_version (VARCHAR 50) - Version of AI that generated this
+- confidence_score (FLOAT) - Confidence in generation (0-1)
+- user_edited (BOOLEAN, DEFAULT FALSE) - User modified this context
+- created_at (TIMESTAMP, DEFAULT NOW())
+
+Indexes:
+- idx_contexts_meeting_id
+
+Table: notifications
+Columns:
+- id (UUID, PK)
+- meeting_id (UUID, FK -> meetings.id)
+- user_id (UUID, FK -> users.id)
+- channel (VARCHAR 50) - email, telegram, whatsapp
+- scheduled_time (TIMESTAMP WITH TIME ZONE)
+- sent_time (TIMESTAMP, NULLABLE) - When actually sent
+- delivered_time (TIMESTAMP, NULLABLE) - When delivered (for email opens)
+- opened_time (TIMESTAMP, NULLABLE) - When user opened (email tracking)
+- status (VARCHAR 50) - scheduled, sent, delivered, failed, bounced
+- retry_count (INTEGER, DEFAULT 0) - Number of retry attempts
+- error_message (TEXT) - Error details if failed
+- created_at (TIMESTAMP, DEFAULT NOW())
+
+Indexes:
+- idx_notifications_user_id
+- idx_notifications_meeting_id
+- idx_notifications_channel
+- idx_notifications_status
+- idx_notifications_scheduled_time
+
+Table: attendee_info
+Columns:
+- id (UUID, PK)
+- user_id (UUID, FK -> users.id)
+- attendee_email (VARCHAR 255)
+- attendee_name (VARCHAR 255)
+- meeting_count (INTEGER, DEFAULT 0) - Total meetings with this person
+- last_interaction (TIMESTAMP) - Last meeting date
+- notes (TEXT) - Custom notes about this person
+- created_at (TIMESTAMP, DEFAULT NOW())
+- updated_at (TIMESTAMP, DEFAULT NOW())
+
+Indexes:
+- idx_attendee_user_email (composite: user_id, attendee_email)
+
+Table: user_learning_profiles
+Columns:
+- id (UUID, PK)
+- user_id (UUID, FK -> users.id, UNIQUE)
+- reschedule_patterns (JSONB) - Meeting slots often rescheduled
+- prep_time_estimates (JSONB) - Minutes needed per meeting type
+- optimal_notification_times (JSONB) - Preferred reminder timings
+- back_to_back_tolerance (INTEGER) - Minutes user tolerates
+- average_meeting_duration (INTEGER) - In minutes
+- meeting_type_distribution (JSONB) - Percentage of each type
+- last_analysis (TIMESTAMP)
+- updated_at (TIMESTAMP, DEFAULT NOW())
+
+Table: vector_embeddings (for ChromaDB imported data)
+Columns:
+- id (UUID, PK)
+- meeting_id (UUID, FK -> meetings.id)
+- embedding (vector(384)) - Vector embedding of meeting notes
+- embedding_type (VARCHAR 50) - Model used (all-MiniLM-L6-v2, etc)
+- content (TEXT) - Original text that was embedded
+- created_at (TIMESTAMP, DEFAULT NOW())
+
+Note: Can use ChromaDB locally (recommended for MVP) instead of storing in PostgreSQL
+
+9.3 DATA RELATIONSHIPS
+
+User 1 --- Many --- Meetings
+User 1 --- Many --- Contexts (through Meetings)
+User 1 --- Many --- Notifications (through Meetings)
+User 1 --- Many --- AttendeeInfo
+User 1 --- One --- UserLearningProfile
+
+Meeting 1 --- One --- Context
+Meeting 1 --- Many --- Notifications
+Meeting 1 --- Many --- VectorEmbeddings
+
+9.4 DATABASE MIGRATION STRATEGY
+
+Tool: Alembic (Python database migration tool)
+
+Initial Schema SQL:
+- Use Alembic to create initial schema from models
+- Version control all schema changes
+- Run migrations on deployment
+
+Migration Workflow:
+1. Define model in Python (SQLAlchemy)
+2. Generate migration: alembic revision --autogenerate -m "description"
+3. Review generated migration file
+4. Apply: alembic upgrade head
+
+Backup Strategy:
+- Supabase automatic daily backups (unlimited duration)
+- Manual export before major migrations
+- Point-in-time recovery available
+
+9.5 QUERY OPTIMIZATION
+
+Frequently Accessed Queries:
+1. Get meetings for user (next 7 days)
+   SELECT * FROM meetings WHERE user_id = ? AND start_time > NOW()
+   AND start_time < NOW() + INTERVAL 7 DAYS ORDER BY start_time
+
+2. Get context for meeting
+   SELECT * FROM contexts WHERE meeting_id = ?
+
+3. Get pending notifications
+   SELECT * FROM notifications WHERE status = 'scheduled'
+   AND scheduled_time <= NOW() ORDER BY scheduled_time
+
+4. Get user preferences
+   SELECT preferences FROM users WHERE id = ?
+
+Query Optimization Techniques:
+- Composite indexes for frequently joined columns
+- Materialized views for complex aggregations
+- Connection pooling (PgBouncer)
+- Query result caching (Redis optional)
+- Lazy loading (only fetch needed columns)
+
+Query Timeout:
+- Set to 30 seconds for all queries
+- Kill long-running queries automatically
+
+9.6 Data Retention Policy
+
+Keep Forever:
+- User account data
+- Meeting metadata (title, time, attendees)
+- User-entered notes
+- Failed notification logs (for debugging)
+
+Delete After 1 Year:
+- Detailed notification logs
+- Intermediate processing data
+- Temporary cache entries
+
+Delete After 90 Days:
+- API request logs
+- Error logs (except critical)
+- Temporary files
+
+GDPR Compliance:
+- User has right to delete all data
+- Implement soft deletes (add deleted_at timestamp)
+- Export user data on request (JSON format)
+- Full database export capability
+
+================================================================================
+SECTION 10: FREE TOOLS AND SERVICES SPECIFICATION
+================================================================================
+
+10.1 COMPLETE FREE TOOLS LIST
+
+Frontend Hosting:
+- Vercel (Next.js deployment)
+  - Free tier: Unlimited bandwidth, automatic SSL, GitHub integration
+  - Limits: For open source / non-commercial
+  - Alternative: Netlify (similar offering)
+
+Backend Hosting:
+- Railway.app
+  - Free tier: $5 monthly credit (sufficient for MVP)
+  - Includes: Docker deployment, PostgreSQL, log streaming
+  - Easy GitHub integration
+  - Alternative: Heroku (limited free tier now)
+
+Database:
+- Supabase (PostgreSQL managed)
+  - Free tier: 500MB storage, 2GB bandwidth/month
+  - Includes: SSL, backups, authentication
+  - Alternative: Railway PostgreSQL (included in free credits)
+
+Vector Database (Local):
+- ChromaDB
+  - Language: Python
+  - License: Apache 2.0 (open source)
+  - Installation: pip install chromadb
+  - Runs locally (no external service)
+  - Supports: Embeddings, semantic search
+  - Alternative: Milvus (more complex setup)
+
+AI Model (Local Inference):
+- Ollama
+  - Website: ollama.com
+  - Model: Mistral 7B (open source)
+  - Install: Windows, Mac, Linux
+  - License: MIT (free)
+  - Architecture: REST API on localhost:11434
+  - Alternative models: Llama 2, Zephyr, Neural Chat
+
+Calendar API (Free Tier):
+- Google Calendar API
+  - Free tier: 1M queries per day (more than sufficient)
+  - Auth: OAuth 2.0 (free)
+  - Includes: Push notifications (webhooks)
+  - Requires: Google Cloud project (sign up free)
+
+Email Reading/Sending (Free Tier):
+- Gmail API
+  - Free tier: 1B units/day for individual use
+  - Includes: OAuth authentication
+  - Requires: Gmail account
+  - Quotas: Usually not an issue for SMB use
+  - Alternative: SMTP (unlimited for personal)
+
+Email Sending (Alternative):
+- SMTP (any email provider)
+  - Gmail SMTP: Free (use app-specific password)
+  - Sendgrid: 100 emails/day free (limited)
+  - Mailgun: 5000 emails/month free (limited)
+  - Recommendation: Gmail SMTP (simplest)
+
+Instant Messaging:
+- Telegram Bot API
+  - License: Free
+  - Limits: Unlimited message sending
+  - Bot creation: Free via @BotFather
+  - API: No authentication required (bot token is public)
+  - Webhook: Free (can self-host or use polling)
+  - Alternative: Discord (also free but less suitable)
+
+WhatsApp (Optional Due to Costs):
+- Twilio WhatsApp Sandbox
+  - Free tier: Limited to 20 test contacts
+  - Suitable for: Testing, small user base
+  - Cost: ~$0.005 per message after free tier
+  - Alternative: Use Telegram instead (completely free)
+  - Note: WhatsApp Business API requires payment
+  - Recommendation for MVP: Skip WhatsApp, use Telegram
+
+Version Control:
+- GitHub
+  - Free tier: Unlimited public repos, unlimited collaborators
+  - Includes: GitHub Actions (CI/CD)
+  - License: MIT (for open source projects)
+  - Alternative: GitLab (similar offering)
+
+CI/CD Pipeline:
+- GitHub Actions
+  - Free tier: 2000 minutes/month (sufficient)
+  - Included with GitHub
+  - Use for: Testing, automated deployment
+  - No additional setup needed
+
+Code Quality & Monitoring:
+- Sentry (error tracking)
+  - Free tier: 5000 errors/month
+  - Excellent for MVP phase
+  - Includes: Error grouping, release tracking
+  - Alternative: LogRocket (limited free)
+
+- SonarCloud (code quality)
+  - Free tier: For open source projects
+  - Includes: Security scanning, code coverage
+  - Integrates with GitHub Actions
+
+- PyLint / ESLint (local tools)
+  - Free, open source
+  - Run locally during CI/CD
+  - No external service required
+
+Development Tools:
+- Visual Studio Code
+  - License: Free (MIT open source)
+  - Recommended extensions: Python, TypeScript, Prettier
+  
+- Docker / Docker Compose
+  - License: Free (open source)
+  - Use for: Local development, production deployment
+  
+- Python Virtual Environment (venv)
+  - License: Free (built-in)
+  - No external tool needed
+
+- Node.js Package Manager (npm)
+  - License: Free (open source)
+  - Alternative: yarn (also free)
+
+Documentation:
+- Markdown files in GitHub
+- README.md (setup guide)
+- API documentation via Swagger (auto-generated from FastAPI)
+- Architecture Decisions Records (ADRs) in plain text
+
+SSL/TLS Certificates:
+- Let's Encrypt
+  - License: Free
+  - Auto-renewal: Free
+  - Trusted by all browsers
+  - Includes: SSL/TLS for domains
+  - Used by: Vercel, Railway (automatic)
+
+Domain (Optional):
+- Freenom (free domains)
+  - TLDs: .tk, .ml, .ga, .cf (free)
+  - Limitation: Limited features, may need renewal
+  - Alternative: Use subdomain on free hosting (no domain needed)
+
+Analytics (Optional):
+- Plausible Analytics (privacy-focused)
+  - Free tier: For open source only
+  - Alternative: Fathom (similar)
+  - Note: Both are paid, but free for open source
+
+10.2 FREE TIER CONSOLIDATION
+
+Total Monthly Cost: $0 (completely free)
+
+Critical Services (Included):
+1. Frontend hosting: Vercel (free)
+2. Backend hosting: Railway (uses free $5 credit)
+3. Database: Supabase (500MB free)
+4. AI model: Ollama (local, free)
+5. Calendar sync: Google API (free tier)
+6. Email: Gmail API (free tier)
+7. Messaging: Telegram (free)
+8. CI/CD: GitHub Actions (free)
+9. Error tracking: Sentry (free tier)
+10. Version control: GitHub (free)
+
+Paid Services Required After Growth:
+- Railway overage fees (beyond $5/month)
+- Supabase storage ($25/100GB after 500MB)
+- Gmail API quotas (may need to scale infrastructure)
+- Telegram rate limits (unlikely to hit)
+
+Cost Trajectory:
+- MVP phase (0-1000 users): $0
+- Growth phase (1000-10k users): $20-50/month
+- Scale phase (10k+ users): $100-500/month
+
+10.3 API RATE LIMITS AND QUOTAS
+
+Google Calendar API:
+- Limit: 1,000,000 requests/day
+- Average usage: 100-200 requests/user/month
+- Safeguard: Cache events, sync every 15 minutes
+- Calculation: 1000 users × 200 requests = 200,000 requests/month (safe)
+
+Gmail API:
+- Limit: 1,000,000,000 quota units/day
+- Per user limit: 250 quota units/second
+- Email sending: About 100 units per email
+- Average usage: 10 emails/day/user
+- Safeguard: Batch emails, implement rate limiting
+- Calculation: 1000 users × 10 emails = 10,000 emails/month (safe)
+
+Telegram Bot API:
+- Limit: No official limits mentioned
+- Practical limit: Rate limiting (server-side)
+- Safe to send: 100 messages/second
+- Safeguard: Queue messages, stagger delivery
+- Calculation: 1000 users × 5 messages/day = 5,000 messages/day (safe)
+
+Supabase Database:
+- Storage: 500MB free (database size limit)
+- Bandwidth: 2GB/month free
+- Connections: 2 concurrent connections (sufficient)
+- Query timeout: 60 seconds
+- Average data size: 10MB for 1000 users (safe)
+
+Vercel Deployment:
+- Bandwidth: Unlimited (no cost)
+- Functions: 100GB/month (sufficient for MVP)
+- Build time: 100 hours/month (sufficient)
+- No additional cost
+
+Railway Deployment:
+- Monthly credit: $5 free
+- Usage: $0.000463 per vCPU-hour
+- Example: 1 vCPU running 24/7 = ~$340/month (can upgrade if needed)
+- Optimization: Use smaller containers, optimize processes
+
+10.4 ESCALATION PLAN (If Limits Exceeded)
+
+If Google Calendar API quota exceeded:
+- Implement caching (Redis) - $5-10/month
+- Switch to webhook-only polling
+- Compress event data
+
+If Gmail API quota exceeded:
+- Switch from Gmail API to native SMTP
+- Use SMTP rate limiting (prevents issues)
+- Cost: Still free
+
+If Supabase storage exceeded:
+- Switch to MongoDB Atlas (more free tier: 512MB)
+- Archive old meetings (move to archive storage)
+- Compress stored data
+- Cost: MongoDB free tier or $0 with archival
+
+If Telegram rate limited:
+- Implement message queuing
+- Stagger delivery times
+- No cost (handled locally)
+
+If Railway credits exceeded:
+- Migrate to Heroku (if free tier restored)
+- Self-host on VPS ($5-10/month)
+- Optimize resource usage
+- Cost: $5-15/month
+
+================================================================================
+SECTION 11: NOTIFICATION CHANNELS - DETAILED SETUP
+================================================================================
+
+11.1 EMAIL NOTIFICATIONS (Gmail)
+
+Option A: Gmail API (Recommended for Setup Ease)
+
+Setup Steps:
+1. Create Google Cloud project (console.cloud.google.com)
+2. Enable Gmail API for project
+3. Create OAuth credentials (OAuth 2.0 Client ID)
+4. Download credentials.json
+5. First run: Browser auth redirect (user grants permission)
+6. Store refresh token securely in database
+
+Python Implementation:
+```
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from email.mime.text import MIMEText
+import base64
+
+# OAuth flow (one time per user)
+def authenticate_gmail():
+    SCOPES = ['https://www.googleapis.com/auth/gmail.send']
+    flow = InstalledAppFlow.from_client_secrets_file(
+        'credentials.json', SCOPES)
+    creds = flow.run_local_server(port=0)
+    return creds
+
+# Send email
+def send_email(creds, to, subject, html_body):
+    from googleapiclient.discovery import build
+    service = build('gmail', 'v1', credentials=creds)
+    
+    message = MIMEText(html_body, 'html')
+    message['to'] = to
+    message['subject'] = subject
+    
+    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+    send_message = {'raw': raw_message}
+    
+    service.users().messages().send(userId='me', body=send_message).execute()
+```
+
+Option B: SMTP (Gmail)
+
+Setup Steps:
+1. Enable 2-factor authentication on Gmail account
+2. Create app-specific password
+3. Store password in environment variable
+
+Python Implementation:
+```
+import smtplib
+from email.mime.text import MIMEText
+
+smtp_server = "smtp.gmail.com"
+smtp_port = 587
+sender_email = os.getenv("GMAIL_EMAIL")
+app_password = os.getenv("GMAIL_APP_PASSWORD")
+
+def send_email(to, subject, html_body):
+    message = MIMEText(html_body, 'html')
+    message['Subject'] = subject
+    message['From'] = sender_email
+    message['To'] = to
+    
+    with smtplib.SMTP(smtp_server, smtp_port) as server:
+        server.starttls()
+        server.login(sender_email, app_password)
+        server.sendmail(sender_email, to, message.as_string())
+```
+
+Recommendation: Use SMTP (simpler, no OAuth management)
+
+Email Template:
+
+Subject: Meeting Reminder: [MEETING_TITLE]
+
+Body (HTML):
+<html>
+<head>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, Sans-Serif; }
+    .container { max-width: 600px; margin: 0 auto; }
+    .header { background-color: #2563eb; color: white; padding: 20px; }
+    .content { padding: 20px; border: 1px solid #e5e7eb; }
+    .button { background-color: #2563eb; color: white; padding: 10px 20px;
+              text-decoration: none; border-radius: 4px; display: inline-block; }
+    .footer { color: #666; font-size: 12px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Calendar Reminder</h2>
+    </div>
+    <div class="content">
+      <p>Hi [USER_NAME],</p>
+      
+      <h3>[MEETING_TITLE]</h3>
+      <p><strong>Time:</strong> [DATE_TIME]</p>
+      <p><strong>Attendees:</strong> [ATTENDEE_LIST]</p>
+      
+      <h4>Meeting Context:</h4>
+      <p>[CONTEXT_BRIEF]</p>
+      
+      <h4>Preparation Checklist:</h4>
+      <ul>
+        [CHECKLIST_ITEMS as <li>]
+      </ul>
+      
+      <p>
+        <a href="[MEETING_LINK]" class="button">Join Meeting</a>
+      </p>
+      
+      <p><small>This email was automatically generated by ContextMeet.</small></p>
+    </div>
+    <div class="footer">
+      <p>Settings: [PREFERENCES_LINK]</p>
+    </div>
+  </div>
+</body>
+</html>
+
+Email Delivery Guarantees:
+- Retry mechanism: 2 retries at 5 minute intervals
+- Max 3 total delivery attempts
+- Log all delivery attempts
+- Alert user if all attempts fail
+
+11.2 TELEGRAM NOTIFICATIONS
+
+Setup Steps:
+1. Search for @BotFather in Telegram
+2. Send /start command
+3. Send /newbot command
+4. Name your bot: ContextMeet
+5. BotFather returns bot token (keep secure)
+6. Store token in environment variable
+
+Python Setup:
+```
+pip install python-telegram-bot
+
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.constants import ChatAction
+
+bot = Bot(token=os.getenv("TELEGRAM_BOT_TOKEN"))
+
+async def send_meeting_reminder(chat_id, meeting_info):
+    text = f"""
+📅 <b>{meeting_info['title']}</b>
+
+⏰ <i>{meeting_info['start_time']}</i>
+👥 {', '.join(meeting_info['attendees'])}
+
+📋 <b>Context:</b>
+{meeting_info['context_brief']}
+
+✅ <b>Prepare:</b>
+{format_checklist(meeting_info['checklist'])}
+    """
+    
+    buttons = [
+        [InlineKeyboardButton("Join Meeting", url=meeting_info['link'])],
+        [InlineKeyboardButton("Snooze 10min", 
+                            callback_data=f"snooze_{meeting_info['id']}")],
+        [InlineKeyboardButton("Done", 
+                            callback_data=f"done_{meeting_info['id']}")]
+    ]
+    
+    reply_markup = InlineKeyboardMarkup(buttons)
+    
+    await bot.send_message(
+        chat_id=chat_id,
+        text=text,
+        parse_mode='HTML',
+        reply_markup=reply_markup
+    )
+```
+
+User Linking Process:
+1. User provides Telegram username to app
+2. App creates unique link command
+3. User searches bot: @ContextMeetBot
+4. User sends: /link_[UNIQUE_CODE]
+5. Bot verifies code, links chat_id to user account
+6. Connection complete
+
+Telegram Message Format:
+- Keep under 4096 characters (Telegram limit)
+- Use markdown formatting (bold, italic, links)
+- Include inline buttons for actions
+- Emoji usage minimal (no emoji, use text descriptions)
+
+Telegram Inline Buttons:
+- "Join Meeting" (URL button, opens link)
+- "Snooze 10 minutes" (sends callback query)
+- "Done" (sends callback query)
+- "View Details" (sends callback query)
+
+Callback Handler:
+```
+async def handle_callback(update: Update, context):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data.startswith("snooze_"):
+        meeting_id = query.data.split("_")[1]
+        # Reschedule notification for 10 minutes later
+        await snooze_notification(context.user_data['user_id'], meeting_id)
+        await query.edit_message_text("Reminder snoozed for 10 minutes")
+    
+    elif query.data.startswith("done_"):
+        meeting_id = query.data.split("_")[1]
+        # Mark notification as done, don't send more reminders
+        await mark_notification_done(meeting_id)
+        await query.edit_message_text("Notification dismissed")
+```
+
+Telegram Delivery Guarantees:
+- No retry needed (Telegram tracks delivery)
+- Up to 23 hours delivery guarantee
+- Polling vs webhook: Polling simpler for MVP
+
+Telegram Security:
+- Bot token must be kept secret (not in code)
+- Validate webhook_secret if using webhooks
+- Users must verify phone number to use Telegram
+
+11.3 WHATSAPP NOTIFICATIONS (Optional, Limited Free Tier)
+
+Option: Twilio WhatsApp Sandbox
+
+Setup Steps:
+1. Create Twilio account (twilio.com)
+2. Get free trial credits ($15)
+3. Enable WhatsApp Sandbox
+4. User sends "join" message to Twilio number
+5. Save user's WhatsApp number
+
+Python Implementation:
+```
+from twilio.rest import Client
+
+account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+twilio_whatsapp = "whatsapp:+1234567890"  # Sandbox number
+
+client = Client(account_sid, auth_token)
+
+def send_whatsapp_reminder(whatsapp_number, meeting_info):
+    message = client.messages.create(
+        from_=twilio_whatsapp,
+        to=f"whatsapp:{whatsapp_number}",
+        body=f"""
+Meeting Reminder: {meeting_info['title']}
+
+Time: {meeting_info['start_time']}
+Attendees: {', '.join(meeting_info['attendees'])}
+
+Context:
+{meeting_info['context_brief']}
+
+Prepare:
+{format_checklist(meeting_info['checklist'])}
+
+Join: {meeting_info['link']}
+        """
+    )
+    return message.sid
+```
+
+Limitations:
+- Sandbox: Max 20 test contacts
+- After sandbox: $0.005 per message (costs money)
+- Recommendation for MVP: Skip WhatsApp, use Telegram
+
+Recommendation:
+- Use Telegram for all instant messaging needs (free, unlimited)
+- Add WhatsApp only after securing funding
+- Both services can coexist
+
+================================================================================
+SECTION 12: COMPLETE IMPLEMENTATION ROADMAP
+================================================================================
+
+12.1 PHASE 1: MVP SETUP (WEEKS 1-2)
+
+Week 1: Infrastructure and Backend Foundation
+
+Day 1-2: Project Setup
+- Create GitHub repository
+- Set up Project management (GitHub Projects or Trello)
+- Create folder structure (frontend, backend directories)
+- Set up development environment documentation
+- Create .env.example files with all required variables
+
+Day 3-4: Backend Initialization
+- Create Python virtual environment (venv)
+- Initialize FastAPI application (main.py)
+- Set up PostgreSQL database (Supabase free tier)
+- Create database connection module
+- Set up SQLAlchemy ORM and models
+- Initialize Alembic for migrations
+- Set up logging system
+
+Day 5: Authentication System
+- Create User model in database
+- Implement JWT token generation/validation
+- Set up Google OAuth 2.0 integration
+- Create auth endpoints (login, register, oauth-callback)
+- Set up secure token storage
+- Implement password hashing (bcrypt)
+
+Deliverables:
+- Functional API with /docs endpoint (Swagger)
+- Database connection verified
+- Authentication endpoints tested
+- JWT tokens working
+- Google OAuth flow working
+
+Week 2: Frontend Setup and Calendar Integration
+
+Day 1-2: Frontend Initialization
+- Create Next.js project structure
+- Set up Tailwind CSS configuration
+- Create login page component
+- Implement Google OAuth callback page
+- Create basic layout (header, sidebar)
+- Set up routing structure
+
+Day 3-4: Calendar API Integration
+- Implement Google Calendar API client
+- Create calendar sync endpoint (backend)
+- Store calendar events in database
+- Implement event filtering logic
+- Set up periodic sync (15 minutes)
+- Test with real calendar data
+
+Day 5: Dashboard Development
+- Create meeting list component
+- Implement meeting card display
+- Add filtering and sorting
+- Set up real-time refresh
+- Create responsive design
+- Test on mobile and desktop
+
+Deliverables:
+- Login page functional
+- Dashboard displaying real calendar events
+- Frontend-backend communication working
+- Responsive design verified
+- Basic styling complete
+
+12.2 PHASE 2: AI INTEGRATION (WEEKS 3-4)
+
+Week 3: Mistral AI Setup and Context Generation
+
+Day 1-2: Ollama and Mistral Setup
+- Install Ollama (OS-specific)
+- Pull Mistral 7B model (ollama pull mistral)
+- Set up local Ollama server (localhost:11434)
+- Create Python Ollama client
+- Test inference with sample prompts
+- Implement error handling
+
+Day 3-4: Context Generation Agent
+- Create Context Agent class
+- Implement prompt engineering
+- Implement AI inference
+- Handle response parsing
+- Store context in database
+- Test with real meetings
+
+Day 5: Monitor Agent
+- Create Monitor Agent class
+- Implement calendar polling logic
+- Set up APScheduler for 15-minute cycle
+- Implement event change detection
+- Queue tasks for Context Agent
+- Test with real calendar updates
+
+Deliverables:
+- Mistral AI generating meeting briefs
+- Context stored in database
+- Monitor Agent detecting calendar changes
+- No hallucinations or irrelevant context
+- Performance under 10 seconds
+
+Week 4: Multi-Channel Notifications
+
+Day 1-2: Email Setup
+- Choose Gmail SMTP (simpler)
+- Set up SMTP configuration
+- Create email template system
+- Implement email sending function
+- Add retry mechanism
+- Test email delivery
+
+Day 3-4: Telegram Integration
+- Create Telegram bot (@BotFather)
+- Set up python-telegram-bot library
+- Implement message formatting (markdown)
+- Create inline keyboard buttons
+- Implement callback handlers
+- Test message delivery
+
+Day 5: Notification Agent and Scheduling
+- Create Notification Agent class
+- Implement notification timing logic
+- Set up APScheduler for scheduled delivery
+- Implement delivery status tracking
+- Add user preferences (channels, timing)
+- Test full notification flow
+
+Deliverables:
+- Email notifications working
+- Telegram notifications working
+- User preferences configurable
+- Notifications scheduled correctly
+- Delivery tracking visible
+
+12.3 PHASE 3: FRONTEND COMPLETION (WEEK 5)
+
+Day 1-2: Meeting Details and Context Display
+- Create meeting detail page
+- Display AI-generated context
+- Add note-taking section
+- Implement context editing
+- Add action buttons
+- Make responsive
+
+Day 3: Settings and Preferences
+- Create settings page
+- Toggle notification channels
+- Configure reminder timing
+- Set timezone and do-not-disturb
+- Add Telegram linking
+- Add data export button
+
+Day 4: Dashboard Enhancements
+- Add meeting search functionality
+- Add filtering by meeting type
+- Add sorting options
+- Create weekly view
+- Add notification indicators
+- Implement real-time updates
+
+Day 5: Testing and Polish
+- Test all pages on mobile
+- Fix responsive issues
+- Improve animations and UX
+- Add loading states
+- Add error handling UI
+- Accessibility audit
+
+Deliverables:
+- Complete dashboard functional
+- All settings accessible
+- Mobile fully responsive
+- Zero console errors
+- Accessibility score: 90+
+
+12.4 PHASE 4: TESTING AND DEPLOYMENT (WEEK 6)
+
+Day 1: Unit Testing
+- Write unit tests for critical functions
+- Test backend services (calendar, email, telegram)
+- Test frontend components
+- Set up pytest for Python
+- Set up Jest for JavaScript
+- Target: 70%+ code coverage
+
+Day 2: Integration Testing
+- Test end-to-end flows
+- Test API endpoints
+- Test database operations
+- Test agent communication
+- Test notification delivery
+- Test error scenarios
+
+Day 3: Performance Testing
+- Load test with simulated users
+- Measure response times
+- Check database query performance
+- Monitor memory usage
+- Test with 100 concurrent events
+- Optimize bottlenecks
+
+Day 4: Deployment Preparation
+- Create Dockerfiles (backend + frontend)
+- Set up ci/cd pipeline (GitHub Actions)
+- Configure environment variables
+- Set up Vercel deployment
+- Set up Railway deployment
+- Create deployment documentation
+
+Day 5: Production Deployment
+- Deploy frontend to Vercel
+- Deploy backend to Railway
+- Verify all services running
+- Set up monitoring (Sentry)
+- Create runbooks for common issues
+- Document post-deployment verification
+
+Deliverables:
+- Application deployed to production
+- Monitoring and error tracking active
+- Performance baseline established
+- Documentation complete
+- Ready for user testing
+
+12.5 IMPLEMENTATION TIMELINE SUMMARY
+
+Week 1: Backend Foundation, Auth, DB Setup
+- Status: Infrastructure ready
+- Commits: 20-30
+
+Week 2: Frontend Init, Calendar Integration
+- Status: Dashboard showing real meetings
+- Commits: 20-30
+
+Week 3: Mistral AI, Context Generation
+- Status: AI generating meeting briefs
+- Commits: 20-25
+
+Week 4: Notifications (Email + Telegram)
+- Status: Users receiving reminders
+- Commits: 20-25
+
+Week 5: Frontend Completion, Polish
+- Status: Product-ready interface
+- Commits: 15-20
+
+Week 6: Testing, Deployment, Launch
+- Status: Live in production
+- Commits: 10-15
+
+Total Commits: ~120-135
+Total Development Time: 6 weeks (1 experienced developer full-time)
+
+12.6 DEVELOPMENT PRIORITIES
+
+Must Have (Critical Path):
+1. Database schema and connectivity
+2. Google Calendar API sync
+3. Context generation (Mistral AI)
+4. Email notifications
+5. Basic dashboard
+6. User authentication
+7. Telegram notifications
+
+Should Have (High Value, Nice to Have):
+8. Settings customization
+9. Meeting details view
+10. Post-meeting notes
+11. Pattern learning
+12. Prep checklist display
+13. Context editing UI
+
+Nice to Have (Low Priority):
+14. WhatsApp notifications
+15. Voice notes
+16. Data export
+17. Advanced analytics
+18. Team sharing features
+
+This prioritization ensures MVP functionality in Weeks 1-5,
+with optional enhancements in Week 6+.
+
+================================================================================
+SECTION 13: COMPLETE TECHNOLOGY STACK SUMMARY
+================================================================================
+
+13.1 FULL TECH STACK SPECIFICATION
+
+Frontend:
+- Framework: Next.js 14 (React 18)
+- Language: TypeScript 5.3+
+- Styling: Tailwind CSS 3.3+
+- HTTP Client: Fetch API (built-in) or Axios
+- State Management: Context API (built-in)
+- UI Components: Built custom (no heavy frameworks)
+- Form Validation: React Hook Form + Zod
+- Deployment: Vercel (free tier)
+- Package Manager: npm or yarn
+
+Backend:
+- Language: Python 3.11+
+- Framework: FastAPI 0.104+
+- Web Server: Uvicorn
+- Database: PostgreSQL (Supabase) or SQLite
+- ORM: SQLAlchemy 2.0+
+- Async: asyncio, aiohttp
+- Background Tasks: APScheduler 3.10+
+- Email: smtplib or Gmail API
+- Messaging: python-telegram-bot 20.3+
+- AI: Ollama client (local inference)
+- Vector DB: ChromaDB
+- ML: scikit-learn, pandas, numpy
+- Deployment: Railway (free tier)
+- Package Manager: pip + venv
+
+AI Services:
+- Model: Mistral 7B (via Ollama)
+- Embedding: all-MiniLM-L6-v2
+- Vector Storage: ChromaDB (local)
+- Inferencing: Ollama REST API
+- Host: Local machine (not cloud)
+
+External APIs:
+- Google Calendar API (free tier)
+- Gmail API (free tier)
+- Telegram Bot API (free)
+- Twilio WhatsApp (paid, optional)
+
+Databases:
+- Primary: PostgreSQL (Supabase)
+- Vector: ChromaDB (local)
+- Cache: Optional Redis (not needed for MVP)
+
+DevOps:
+- Version Control: Git + GitHub
+- CI/CD: GitHub Actions
+- Containerization: Docker (optional for deployment)
+- Container Orchestration: Docker Compose (local dev)
+- Hosting: Vercel (frontend), Railway (backend)
+- Monitoring: Sentry (error tracking)
+- Logging: Python logging + Sentry
+
+Development Tools:
+- IDE: Visual Studio Code (recommended)
+- Code Formatter: Black (Python), Prettier (JS)
+- Linter: Pylint/Flake8 (Python), ESLint (JS)
+- Type Checker: mypy (Python), TypeScript
+- Testing: pytest (Python), Jest (JS)
+- API Testing: Postman or Insomnia
+- Database UI: pgAdmin (PostgreSQL)
+
+Security:
+- Authentication: OAuth 2.0 (Google)
+- Session: JWT tokens
+- Encryption: bcrypt (passwords), cryptography (tokens)
+- SSL/TLS: Let's Encrypt (included in hosting)
+- Secrets: .env files + environment variables
+
+13.2 DEPENDENCY LISTS
+
+Python Backend Requirements (requirements.txt):
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+sqlalchemy==2.0.23
+asyncpg==0.29.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+pytest==7.4.3
+aiohttp==3.9.1
+google-auth==2.25.2
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+google-api-python-client==2.107.0
+python-telegram-bot==20.3
+apscheduler==3.10.4
+chromadb==0.4.16
+ollama==0.1.18
+scikit-learn==1.3.2
+pandas==2.1.3
+numpy==1.26.2
+requests==2.31.0
+pyyaml==6.0.1
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+Node.js Frontend Dependencies (package.json):
+- next@14.0.3
+- react@18.2.0
+- react-dom@18.2.0
+- typescript@5.3.3
+- tailwindcss@3.3.6
+- autoprefixer@10.4.16
+- postcss@8.4.31
+- axios@1.6.2
+- react-hook-form@7.48.0
+- zod@3.22.4
+- zustand@4.4.2
+- next-auth@4.24.7
+
+Optional/Development:
+- @types/node@20.10.5
+- @types/react@18.2.45
+- eslint@8.55.0
+- prettier@3.1.1
+- tailwindcss-plugin@1.0.0
+
+13.3 INFRASTRUCTURE REQUIREMENTS
+
+Hardware (For Running Ollama/Mistral):
+- RAM: Minimum 8GB (16GB recommended)
+- CPU: Any modern processor (no GPU required, but helpful)
+- Disk: 20GB (for model and data)
+- OS: Windows 10+, macOS 11.0+, Linux (any distro)
+
+Network:
+- Internet: Required for Google APIs, email, Telegram
+- Bandwidth: 10Mbps minimum (for API calls)
+- Upload speed: No critical requirement
+- Offline capability: Limited (AI works, but no sync)
+
+Deployment Infrastructure:
+
+Vercel (Frontend):
+- Serverless: Included
+- Bandwidth: Unlimited
+- Build time: 100 hours/month
+- Functions: 100GB/month
+- Cost: $0 (free tier)
+
+Railway (Backend):
+- Container: US-W region
+- CPU: Shared vCPU
+- RAM: 512MB to 2GB
+- Storage: Included
+- Monthly free: $5 credit
+- Overage: $0.000463/vCPU-hour
+- Cost: $0-5/month (within free tier)
+
+Supabase (Database):
+- Database: PostgreSQL 14
+- Storage: 500MB free
+- Bandwidth: 2GB/month
+- Connections: 2 concurrent
+- Backups: Daily (included)
+- Cost: $0 (free tier)
+
+13.4 COST BREAKDOWN
+
+Monthly Recurring Costs (MVP Phase):
+- Hosting (all services): $0-5/month (within free tiers)
+- Domain (optional): $0/year (use free subdomain)
+- Email (Gmail SMTP): $0/month
+- AI Model (local): $0/month
+- Messaging (Telegram): $0/month
+- Database: $0/month (within free tier)
+- Monitoring: $0/month (Sentry free tier)
+
+Total Monthly Cost: $0-5
+
+Annual Cost Estimate:
+- Year 1: $0-60 (hosting overage if growth)
+- Year 2: $100-500 (assuming 10k users)
+- Year 3: $500-2000 (assuming 50k users)
+
+Comparison to Alternatives:
+- Calendly Pro: $16/month
+- Meet Transcription tools: $20+/month
+- Project management tools: $10-50/month
+- Our solution: $0/month
+
+================================================================================
+SECTION 14: CONCLUSION AND NEXT STEPS
+================================================================================
+
+14.1 DOCUMENT SUMMARY
+
+This document provides a comprehensive roadmap for building ContextMeet,
+an AI-powered meeting context assistant with multi-agent architecture.
+
+Key Highlights:
+- Completely free technology stack (zero cost MVP)
+- Powerful multi-agent system (5 specialized agents)
+- Mistral 7B local AI inference (no API costs)
+- Multi-channel notifications (Email, Telegram, WhatsApp optional)
+- Production-ready architecture (scalable to 10k+ users)
+- 6-week development timeline
+- 80%+ code coverage with testing
+- GDPR compliant and privacy-first
+
+14.2 APPROVAL CHECKLIST
+
+Business Approval:
+- [ ] Problem statement validated with target users
+- [ ] Market size and growth potential confirmed
+- [ ] Revenue model decided (free core, premium later)
+- [ ] MVP scope finalized
+- [ ] Success metrics agreed upon
+
+Technical Approval:
+- [ ] Architecture reviewed and approved
+- [ ] Technology stack choices justified
+- [ ] Free tier limits acceptable for MVP
+- [ ] Performance requirements achievable
+- [ ] Scalability plan confirmed
+
+Team Approval:
+- [ ] Development team capacity confirmed (1 FTE)
+- [ ] Required skills available (Python, React, AI)
+- [ ] Infrastructure access granted (Google APIs, etc)
+- [ ] Deployment access prepared
+- [ ] Support plan defined
+
+14.3 GO/NO-GO DECISION
+
+GO Criteria (All must be met):
+- ✓ Problem well-defined and validated
+- ✓ Technology stack proven and free
+- ✓ Team capable of delivery
+- ✓ Timeline realistic (6 weeks)
+- ✓ Infrastructure ready
+- ✓ MVP scope achievable
+
+Recommendation: GO (All criteria met)
+
+14.4 NEXT STEPS
+
+Immediate (Day 1):
+1. Approve this requirements document
+2. Set up GitHub repository with this as README
+3. Create project management board
+4. Order infrastructure (Supabase, Railway accounts)
+5. Download Ollama and Mistral model
+6. Set up development environment
+
+Short-term (Week 1):
+1. Begin backend setup (FastAPI, database)
+2. Implement authentication
+3. Set up CI/CD pipeline
+4. Create development documentation
+5. Schedule daily standup meetings
+
+Medium-term (Weeks 2-6):
+1. Follow implementation roadmap strictly
+2. Weekly demos to stakeholders
+3. Conduct code reviews on each PR
+4. Monitor performance metrics
+5. Collect early user feedback
+
+Post-Launch (Day 42+):
+1. Beta testing with 10-20 users
+2. Gather feedback on critical features
+3. Plan Phase 2 enhancements
+4. Consider premium features
+5. Scale infrastructure based on usage
+
+14.5 CRITICAL SUCCESS FACTORS
+
+Technical:
+1. Mistral model generates relevant context (90%+ quality)
+2. Calendar sync reliable (99.9% uptime)
+3. Notifications delivered within SLA (2 sec email, 1 sec Telegram)
+4. No data loss (daily backups, GDPR compliance)
+
+User Experience:
+1. Setup time under 5 minutes
+2. No technical knowledge required
+3. Value visible immediately (first meeting context generated)
+4. Dashboard intuitive and responsive
+
+Business:
+1. Free tier cost under $5/month
+2. Users share positive feedback
+3. Viral coefficient positive (users refer friends)
+4. Retention rate 80%+ month-over-month
+
+14.6 RISK MITIGATION
+
+Risk: Mistral AI generates poor context
+Mitigation: Template-based fallback, user editing feature, fine-tuning prompts
+
+Risk: Google Calendar API changes API
+Mitigation: Monitor Google API updates, maintain version flexibility
+
+Risk: Developer becomes unavailable
+Mitigation: Well-documented code, comprehensive test suite, CI/CD automation
+
+Risk: Free tier limits exceeded
+Mitigation: Aggressive caching, data archival, escalation plan documented
+
+Risk: Security vulnerability discovered
+Mitigation: Regular code reviews, security audit before launch, update protocol
+
+14.7 SUCCESS DEFINITION
+
+MVP Success Looks Like:
+- 100+ beta users signed up
+- Average user saves 15+ minutes per week
+- 90% notification delivery rate
+- 95% reported high utility
+- 10+ word-of-mouth referrals
+- Zero major security incidents
+- System runs reliably for 1 month
+
+Post-MVP Success Looks Like:
+- 1000+ active users by month 4
+- 70%+ monthly retention rate
+- Featured in tech publications
+- Open source project with contributors
+- Premium tier with 5-10% adoption
+- Organic growth without paid marketing
+
+================================================================================
+END OF REQUIREMENTS DOCUMENT
+================================================================================
+
+Total Word Count: Approximately 25,000+ words
+Total Sections: 14
+Total Features Described: 50+
+Total Technical Details: 200+
+
+Use this document as your single source of truth for all implementation decisions.
+Update this document as requirements change or new decisions are made.
+
+All team members should have access to this document before development begins.
+
+Version Control:
+- Repository: GitHub (commit this file)
+- Branch: main
+- Review: All PRs should reference requirements from this document
+- Changes: Update this document when requirements change
+
+================================================================================
