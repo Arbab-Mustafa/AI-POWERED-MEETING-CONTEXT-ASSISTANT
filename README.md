@@ -1,4 +1,4 @@
-  ContextMeet - AI-Powered Meeting Context Assistant
+   ContextMeet - AI-Powered Meeting Context Assistant
 
 Project Structure:
 
@@ -79,4 +79,5 @@ Backend: Railway.app (free tier)
 Frontend: Vercel (free tier)
 
 See individual README files for detailed setup instructions.
+
 
