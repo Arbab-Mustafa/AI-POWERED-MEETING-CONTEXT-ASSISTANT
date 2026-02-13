@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # ContextMeet - AI-Powered Meeting Context Assistant
+=======
+ ContextMeet - AI-Powered Meeting Context Assistant
+>>>>>>> ebbda7fcd4c30b3bf25f24455b574093dcb329a2
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-green.svg)](https://fastapi.tiangolo.com/)
@@ -350,3 +354,6 @@ Backend: Railway.app (free tier)
 Frontend: Vercel (free tier)
 
 See individual README files for detailed setup instructions.
+
+
+
