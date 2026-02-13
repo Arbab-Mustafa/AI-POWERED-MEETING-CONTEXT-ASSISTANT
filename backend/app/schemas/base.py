@@ -17,8 +17,19 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    """Schema for user creation."""
-    password: Optional[str] = None
+    """Schema for user creation.
+    
+    Password requirements:
+    - Minimum 8 characters
+    - Maximum 72 characters (bcrypt limit)
+    """
+    password: str = Field(..., min_length=8, max_length=72)
+
+
+class LoginRequest(BaseModel):
+    """Schema for login request."""
+    email: EmailStr
+    password: str = Field(..., max_length=72)
 
 
 class UserUpdate(BaseModel):
@@ -62,6 +73,20 @@ class MeetingUpdate(BaseModel):
     is_cancelled: Optional[bool] = None
 
 
+class MeetingUpdate(BaseModel):
+    """Schema for updating a meeting."""
+    title: Optional[str] = None
+    description: Optional[str] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    attendees: Optional[dict] = None
+    meeting_link: Optional[str] = None
+    meeting_platform: Optional[str] = None
+    notes: Optional[str] = None
+    is_confirmed: Optional[bool] = None
+    is_cancelled: Optional[bool] = None
+
+
 class MeetingResponse(MeetingBase):
     """Schema for meeting response."""
     id: uuid.UUID
@@ -99,6 +124,17 @@ class ContextUpdate(BaseModel):
     attendee_context: Optional[Dict[str, str]] = None
 
 
+class ContextUpdate(BaseModel):
+    """Schema for updating a context."""
+    ai_brief: Optional[str] = None
+    meeting_type: Optional[str] = None
+    key_topics: Optional[dict] = None
+    preparation_checklist: Optional[dict] = None
+    attendee_context: Optional[dict] = None
+    action_items_from_last: Optional[dict] = None
+    user_edited: bool = True
+
+
 class ContextResponse(ContextBase):
     """Schema for context response."""
     id: uuid.UUID
@@ -116,6 +152,13 @@ class NotificationBase(BaseModel):
     channel: str
     scheduled_time: datetime
     status: str = "scheduled"
+
+
+class NotificationCreate(BaseModel):
+    """Schema for creating a notification."""
+    meeting_id: uuid.UUID
+    channel: str
+    scheduled_time: datetime
 
 
 class NotificationResponse(NotificationBase):

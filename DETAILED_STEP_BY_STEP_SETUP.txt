@@ -1,0 +1,605 @@
+================================================================================
+DETAILED VISUAL SETUP GUIDE - Step by Step with Terminal Commands
+================================================================================
+
+================================================================================
+PHASE 1: POSTGRESQL DATABASE SETUP (Most Important - Do First)
+================================================================================
+
+STEP 1: Download PostgreSQL
+--------
+1. Open browser → https://www.postgresql.org/download/
+2. Click your operating system (Windows/Mac/Linux)
+3. Download the installer
+4. Run installer (contextmeet-guide-postgresql.exe for Windows)
+
+STEP 2: Install PostgreSQL
+--------
+Windows Installation Steps:
+1. Run installer (.exe file)
+2. Click "Next" through wizard
+3. When asked for password → Create strong password (remember it!)
+   Example: MySecurePassword123!
+4. Keep port as 5432 (default)
+5. Click "Finish"
+6. PostgreSQL will start automatically
+
+STEP 3: Create Database Using Terminal
+--------
+Open PowerShell or Command Prompt:
+
+Command 1: Connect to PostgreSQL
+psql -U postgres
+
+This will prompt for password → Enter the password you created in Step 2
+
+Command 2: Create the database
+CREATE DATABASE contextmeet;
+
+Command 3: Verify creation
+\l
+
+You should see "contextmeet" in the list
+
+Command 4: Exit
+\q
+
+STEP 4: Get DATABASE_URL Value
+--------
+From the above setup:
+- Username: postgres
+- Password: MySecurePassword123! (what you set)
+- Host: localhost
+- Port: 5432
+- Database: contextmeet
+
+Construct DATABASE_URL:
+DATABASE_URL=postgresql://postgres:MySecurePassword123!@localhost:5432/contextmeet
+
+Also construct DATABASE_ASYNC_URL:
+DATABASE_ASYNC_URL=postgresql+asyncpg://postgres:MySecurePassword123!@localhost:5432/contextmeet
+
+NOTE: If your password contains special characters like @, use URL encoding:
+@ becomes %40
+! becomes %21
+# becomes %23
+: becomes %3A
+
+Example with special chars:
+Password: Pwd@123!
+Encoded: Pwd%40123%21
+URL: postgresql://postgres:Pwd%40123%21@localhost:5432/contextmeet
+
+================================================================================
+PHASE 2: PYTHON SECRET KEY SETUP (Very Quick)
+================================================================================
+
+STEP 1: Open PowerShell/Terminal in backend folder
+--------
+1. Navigate to: c:\Users\hp\Desktop\Managment_agent\backend
+2. Open PowerShell in that folder
+3. Or: cd c:\Users\hp\Desktop\Managment_agent\backend
+
+STEP 2: Generate Secret Key
+--------
+Paste this command exactly:
+
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+It will output something like:
+A-8K_mZ9pQwXyZ1jH4tL5vN6rB2cD3fG4hJ7kL9mN1pR3sT5uV7wX9yZ
+
+STEP 3: Copy the output
+--------
+- Select the output
+- Copy it
+- This is your SECRET_KEY value
+
+Store it:
+SECRET_KEY=<paste_what_you_copied>
+
+================================================================================
+PHASE 3: GOOGLE CLOUD SETUP (Most Complex - Take Your Time)
+================================================================================
+
+STEP 1: Create Google Cloud Project
+--------
+1. Open: https://console.cloud.google.com
+2. Click "Select a Project" (top left, blue button)
+3. Click "NEW PROJECT" (top right)
+4. Project name: ContextMeet
+5. Location: No organization (should be pre-selected)
+6. Click "CREATE"
+7. Wait 1-2 minutes for project creation
+
+STEP 2: Enable Google Calendar API
+--------
+1. After project created, you'll see the dashboard
+2. In search box (top), search: "Google Calendar API"
+3. Click on "Google Calendar API" in results
+4. Click blue "ENABLE" button
+5. Wait for it to complete (should see "API enabled" message)
+
+STEP 3: Enable Gmail API
+--------
+1. In same search box, search: "Gmail API"
+2. Click "Gmail API"
+3. Click blue "ENABLE" button
+4. Wait for completion
+
+STEP 4: Configure OAuth Consent Screen
+--------
+1. In left sidebar, click "Credentials"
+2. If you see banner "Consent screen required", click "CONFIGURE CONSENT SCREEN"
+3. Choose "External" (it's recommended)
+4. Click "CREATE"
+
+Fill the form:
+- App name: ContextMeet
+- User support email: your_email@gmail.com
+- Developer contact information:
+  Email: your_email@gmail.com
+  
+5. Click "SAVE AND CONTINUE"
+
+STEP 5: Add API Scopes
+--------
+On "Scopes" page:
+1. Click "ADD OR REMOVE SCOPES"
+2. In search box, paste: https://www.googleapis.com/auth/calendar
+3. Check the checkbox next to it
+4. In search box again, paste: https://www.googleapis.com/auth/gmail.send
+5. Check its checkbox
+6. In search box again, paste: https://www.googleapis.com/auth/gmail.readonly
+7. Check its checkbox
+8. Click "UPDATE" button
+9. Click "SAVE AND CONTINUE"
+
+STEP 6: Add Test Users
+--------
+On "Test users" page:
+1. Click "ADD USERS"
+2. Enter your Gmail email address
+3. Click "ADD"
+4. Click "SAVE AND CONTINUE"
+5. Click "BACK TO DASHBOARD"
+
+STEP 7: Create OAuth Credentials
+--------
+1. Go to "Credentials" (left sidebar)
+2. Click "Create Credentials" button (top)
+3. Choose "OAuth client ID"
+4. Application type: Web application
+5. Name: ContextMeet Frontend
+
+Add authorized redirect URIs:
+- Click in "Authorized redirect URIs" field
+- Add: http://localhost:3000/auth/callback
+- Click "ADD URI"
+- Add: http://localhost:8000/auth/callback
+- Click "ADD URI"
+
+6. Click "CREATE"
+
+STEP 8: Copy Credentials
+--------
+You'll see a popup with your credentials:
+
+GOOGLE_CLIENT_ID=Copy this value (ends with .apps.googleusercontent.com)
+
+GOOGLE_CLIENT_SECRET=Copy this value (looks like GOCSPX-...)
+
+SAVE THESE SAFELY - Don't share!
+
+In the Credentials page, you can see your app in the OAuth 2.0 Client IDs section.
+
+STEP 9: Verify Credentials in Console
+--------
+In Google Cloud Console:
+1. Go to APIs & Services → Credentials
+2. You should see your "ContextMeet Frontend" OAuth app listed
+3. You can click it to see:
+   - Client ID
+   - Client Secret
+   - Authorized redirect URIs (both your localhost addresses)
+
+Store the values:
+GOOGLE_CLIENT_ID=xxxxxxxxxxxxx.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxx
+GOOGLE_REDIRECT_URI=http://localhost:3000/auth/callback
+
+================================================================================
+PHASE 4: GMAIL APP PASSWORD SETUP (Simple but requires 2FA)
+================================================================================
+
+STEP 1: Check if 2FA is Enabled
+--------
+1. Go to: https://myaccount.google.com/security
+2. Look for "2-Step Verification"
+3. If it says "ON", go to STEP 2
+4. If it says "OFF" or "Not set up":
+   - Click on "2-Step Verification"
+   - Follow Google's instructions to enable it
+   - This usually involves:
+     * Receiving code on your phone
+     * Confirming it in browser
+   - Return to STEP 2
+
+STEP 2: Generate App Password
+--------
+1. Go to: https://myaccount.google.com/apppasswords
+2. Select dropdown: App → Choose "Mail"
+3. Select dropdown: Device → Choose "Windows Computer" (or your OS)
+4. Click "GENERATE"
+5. Google will show a popup with 16-character password
+   It looks like: abcd efgh ijkl mnop (with spaces)
+
+STEP 3: Copy and Format Password
+--------
+1. Highlight the entire password shown
+2. Copy it
+3. REMOVE all spaces: abcdefghijklmnop
+4. This is your GMAIL_APP_PASSWORD
+
+Store the values:
+GMAIL_EMAIL=your_email@gmail.com
+GMAIL_APP_PASSWORD=abcdefghijklmnop
+
+================================================================================
+PHASE 5: TELEGRAM BOT SETUP (Very Quick)
+================================================================================
+
+STEP 1: Open Telegram
+--------
+1. Open Telegram app (or go to https://web.telegram.org)
+2. Search for: @BotFather
+3. Click "BotFather" official account
+4. Click "START" button
+
+STEP 2: Create New Bot
+--------
+1. Send message: /newbot
+2. Answer questions:
+   - What should your bot be called?
+     Answer: ContextMeetBot
+   - Give your bot a username?
+     Answer: contextmeet_bot (must be unique, if taken add number: contextmeet_bot_123)
+
+STEP 3: Copy Bot Token
+--------
+BotFather will reply:
+
+"Done! Congratulations on your new bot. You will find it at
+t.me/contextmeet_bot. You can now add a description, about section
+and profile picture for your bot...
+
+Here are your bot's token and the link to manage it.
+Token: 6123456789:ABCDefGhIjKlMnOpQrStUvWxYz1234567890"
+
+Copy the token (the number:alphanumeric part)
+
+Store the value:
+TELEGRAM_BOT_TOKEN=6123456789:ABCDefGhIjKlMnOpQrStUvWxYz1234567890
+
+================================================================================
+PHASE 6: OLLAMA & MISTRAL SETUP (Required for AI Features)
+================================================================================
+
+STEP 1: Download Ollama
+--------
+1. Visit: https://ollama.ai/download
+2. Click for your OS (Windows/Mac/Linux)
+3. Download the installer
+4. Run installer
+5. Click through wizard, keep defaults
+6. Ollama will install
+
+STEP 2: Verify Ollama is Installed
+--------
+Open PowerShell and run:
+ollama --version
+
+You should see version number (like: ollama version 0.45.1)
+
+STEP 3: Download Mistral Model
+--------
+Open PowerShell and run:
+ollama pull mistral
+
+This will output:
+pulling manifest
+pulling 8ddc1d8c17a6...
+[many download progress lines]
+verifying sha256 digest
+writing manifest
+success
+
+It may take 5-10 minutes depending on internet speed.
+
+STEP 4: Verify Mistral Downloaded
+--------
+Open PowerShell and run:
+ollama list
+
+You should see:
+NAME               ID              SIZE      MODIFIED
+mistral:latest     2dfdc6a16b5e    4.1 GB    2 minutes ago
+
+STEP 5: Start Ollama Server (if not running)
+--------
+Open PowerShell and run:
+ollama serve
+
+You should see:
+2024/02/12 10:15:30 "GET /api/tags HTTP/1.1" 200 95
+
+The server is now running on http://localhost:11434
+
+Keep this terminal open while developing.
+
+STEP 6: Test Connection
+--------
+Open another PowerShell and run:
+curl http://localhost:11434/api/tags
+
+You should see JSON output with mistral in the list:
+{
+  "models": [
+    {
+      "name": "mistral:latest",
+      "modified_at": "2024-02-12T15:20:00.000000000Z",
+      "size": 4406575811,
+      "digest": "2dfdc6a16b5e..."
+    }
+  ]
+}
+
+Store the value:
+MISTRAL_BASE_URL=http://localhost:11434
+
+================================================================================
+PHASE 7: FRONTEND ENVIRONMENT SETUP (Quickest)
+================================================================================
+
+STEP 1: Locate frontend folder
+--------
+Navigate to: c:\Users\hp\Desktop\Managment_agent\frontend
+
+STEP 2: Create .env.local file
+--------
+1. Right-click in folder
+2. New → Text Document
+3. Name it: .env.local
+4. Make sure it says ".env.local" NOT ".env.local.txt"
+
+STEP 3: Add variables
+--------
+Open .env.local and paste:
+
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=<your GOOGLE_CLIENT_ID from Phase 3 Step 8>
+NEXT_PUBLIC_APP_NAME=ContextMeet
+NEXT_PUBLIC_APP_VERSION=1.0.0
+
+Replace <your GOOGLE_CLIENT_ID> with actual value from Google Console.
+
+STEP 4: Save
+--------
+Ctrl+S to save
+
+================================================================================
+PHASE 8: CREATE BACKEND .env FILE (Final Step)
+================================================================================
+
+STEP 1: Locate backend folder
+--------
+Navigate to: c:\Users\hp\Desktop\Managment_agent\backend
+
+STEP 2: Create .env file
+--------
+1. Right-click in folder
+2. New → Text Document
+3. Name it: .env
+4. NOT .env.txt
+
+STEP 3: Add all variables
+--------
+Open .env and paste all of these:
+
+SECRET_KEY=<from Phase 2 Step 3>
+DATABASE_URL=<from Phase 1 Step 4>
+DATABASE_ASYNC_URL=<from Phase 1 Step 4>
+GOOGLE_CLIENT_ID=<from Phase 3 Step 8>
+GOOGLE_CLIENT_SECRET=<from Phase 3 Step 8>
+GOOGLE_REDIRECT_URI=http://localhost:3000/auth/callback
+GMAIL_EMAIL=<from Phase 4 Step 3>
+GMAIL_APP_PASSWORD=<from Phase 4 Step 3>
+TELEGRAM_BOT_TOKEN=<from Phase 5 Step 3>
+MISTRAL_BASE_URL=http://localhost:11434
+ENVIRONMENT=development
+DEBUG=True
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:8000
+LOG_LEVEL=INFO
+SENTRY_DSN=
+
+STEP 4: Save
+--------
+Ctrl+S to save
+
+================================================================================
+VERIFICATION CHECKLIST
+================================================================================
+
+[ ] PostgreSQL running
+    Command: pg_isready
+    Should output: /run/postgresql accepting connections
+
+[ ] Database created
+    Command: psql -U postgres -c "\l"
+    Should show: contextmeet database in list
+
+[ ] Ollama running
+    Command: curl http://localhost:11434/api/tags
+    Should show: mistral in model list
+
+[ ] Mistral model available
+    Command: ollama list
+    Should show: mistral:latest with size
+
+[ ] backend/.env file created
+    Check: File exists at c:\Users\hp\Desktop\Managment_agent\backend\.env
+
+[ ] frontend/.env.local file created
+    Check: File exists at c:\Users\hp\Desktop\Managment_agent\frontend\.env.local
+
+[ ] All required variables set
+    Command: In backend folder: python -c "from app.core.config import settings; print('OK')"
+    Should output: OK (or show which variable is missing)
+
+================================================================================
+QUICK REFERENCE - Copy-Paste Commands
+================================================================================
+
+Generate PostgreSQL password file (Windows):
+---------
+Not needed - use GUI interface
+
+Get all PostgreSQL databases:
+---------
+psql -U postgres -c "\l"
+
+Create database contextmeet:
+---------
+psql -U postgres -c "CREATE DATABASE contextmeet;"
+
+Generate Python secret:
+---------
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+Test Ollama connection:
+---------
+curl http://localhost:11434/api/tags
+
+List all Ollama models:
+---------
+ollama list
+
+Pull Mistral model:
+---------
+ollama pull mistral
+
+Test Telegram bot token:
+---------
+curl https://api.telegram.org/bot<your_token>/getMe
+
+Test Gmail connection (after backend setup):
+---------
+cd backend
+python -c "from app.services.email import send_test_email; send_test_email()"
+
+================================================================================
+TROUBLESHOOTING BY SERVICE
+================================================================================
+
+POSTGRESQL ISSUES:
+---
+Error: "could not connect to server"
+Solution:
+1. Ensure PostgreSQL service is running (Windows Services app)
+2. Check port 5432 is not in use: netstat -an | find "5432"
+3. Try restarting PostgreSQL service
+
+Error: "password authentication failed"
+Solution:
+1. Verify you're using correct password (from installation)
+2. Try resetting password via pgAdmin
+3. Check for special characters that need URL encoding
+
+---
+
+GOOGLE OAUTH ISSUES:
+---
+Error: "redirect_uri_mismatch"
+Solution:
+1. Check Google Console Credentials
+2. Verify redirect URIs match exactly:
+   - http://localhost:3000/auth/callback (no trailing slash!)
+   - http://localhost:8000/auth/callback
+3. Restart backend after verifying
+
+Error: "invalid_client"
+Solution:
+1. Verify GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are correct
+2. Check .env file formatting (no quotes around values)
+3. Ensure you copied entire token (especially .apps.googleusercontent.com)
+
+---
+
+TELEGRAM ISSUES:
+---
+Error: "Unauthorized" when sending message
+Solution:
+1. Verify token is correct: curl https://api.telegram.org/bot<TOKEN>/getMe
+2. Check token formatting (number:letters, no spaces)
+3. Ensure bot was created with /newbot command with BotFather
+
+---
+
+OLLAMA/MISTRAL ISSUES:
+---
+Error: "Cannot connect to http://localhost:11434"
+Solution:
+1. Ensure Ollama is running: ollama serve in terminal
+2. Check if port 11434 is blocked by firewall
+3. Try: netstat -an | find "11434"
+
+Error: "Model not found"
+Solution:
+1. Verify model exists: ollama list
+2. If not, download: ollama pull mistral
+3. Wait for download to complete (5-10 minutes)
+
+---
+
+GMAIL ISSUES:
+---
+Error: "535 5.7.8 Username and password not accepted"
+Solution:
+1. Verify using app-specific password (NOT your Gmail password)
+2. Ensure 2FA is enabled
+3. Try regenerating new app password
+4. Check GMAIL_EMAIL matches the account used for app password
+
+---
+
+ENVIRONMENT FILE ISSUES:
+---
+Error: "KeyError: 'DATABASE_URL'"
+Solution:
+1. Check .env file exists in correct location
+2. Verify SECRET_KEY=value format (no spaces around =)
+3. Check no quotes around values
+4. Restart terminal after creating .env
+5. Run: python -c "from app.core.config import settings; print(settings.DATABASE_URL)"
+
+================================================================================
+FINAL VERIFICATION COMMAND
+================================================================================
+
+After all setup, run this to verify everything:
+
+cd c:\Users\hp\Desktop\Managment_agent\backend
+python -m pytest tests/test_config.py -v
+
+This will test:
+- Database connection
+- All required environment variables
+- Secret key generation
+- OAuth configuration
+- Email configuration
+- Telegram configuration
+- Ollama connection
+
+================================================================================

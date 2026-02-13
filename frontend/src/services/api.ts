@@ -87,3 +87,107 @@ class APIClient {
 }
 
 export const apiClient = new APIClient();
+
+// ============================================
+// Authentication API
+// ============================================
+export const authAPI = {
+  register: (data: { email: string; name: string; password: string }) =>
+    apiClient.post("/auth/register", data),
+
+  login: (data: { email: string; password: string }) =>
+    apiClient.post("/auth/login", data),
+
+  me: () => apiClient.get("/auth/me"),
+
+  googleCallback: (code: string) =>
+    apiClient.post("/auth/google/callback", { code }),
+
+  refresh: () => apiClient.post("/auth/refresh", {}),
+
+  logout: () => apiClient.delete("/auth/logout"),
+};
+
+// ============================================
+// Meetings API
+// ============================================
+export const meetingsAPI = {
+  list: (params?: {
+    skip?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  }) => apiClient.get(`/meetings?${new URLSearchParams(params as any)}`),
+
+  get: (id: string) => apiClient.get(`/meetings/${id}`),
+
+  create: (data: {
+    title: string;
+    description?: string;
+    start_time: string;
+    end_time: string;
+    attendees: string[];
+    meeting_link?: string;
+    location?: string;
+  }) => apiClient.post("/meetings", data),
+
+  update: (id: string, data: any) => apiClient.put(`/meetings/${id}`, data),
+
+  delete: (id: string) => apiClient.delete(`/meetings/${id}`),
+
+  syncGoogle: () => apiClient.post("/meetings/sync/google", {}),
+
+  todayUpcoming: () => apiClient.get("/meetings/today/upcoming"),
+
+  stats: () => apiClient.get("/meetings/stats/overview"),
+};
+
+// ============================================
+// Context API
+// ============================================
+export const contextAPI = {
+  getByMeeting: (meetingId: string) =>
+    apiClient.get(`/contexts/meeting/${meetingId}`),
+
+  generate: (meetingId: string, forceRegenerate: boolean = false) =>
+    apiClient.post(
+      `/contexts/generate/${meetingId}?force_regenerate=${forceRegenerate}`,
+      {},
+    ),
+
+  update: (contextId: string, data: any) =>
+    apiClient.put(`/contexts/${contextId}`, data),
+
+  delete: (contextId: string) => apiClient.delete(`/contexts/${contextId}`),
+
+  recent: (limit: number = 10) =>
+    apiClient.get(`/contexts/user/recent?limit=${limit}`),
+
+  batchGenerate: (meetingIds: string[]) =>
+    apiClient.post("/contexts/batch/generate", { meeting_ids: meetingIds }),
+};
+
+// ============================================
+// Notifications API
+// ============================================
+export const notificationsAPI = {
+  list: (params?: { status?: string; skip?: number; limit?: number }) =>
+    apiClient.get(`/notifications?${new URLSearchParams(params as any)}`),
+
+  schedule: (data: {
+    meeting_id: string;
+    channel: string;
+    scheduled_time: string;
+  }) => apiClient.post("/notifications/schedule", data),
+
+  autoSchedule: (meetingId: string) =>
+    apiClient.post(`/notifications/meeting/${meetingId}/auto-schedule`, {}),
+
+  cancel: (id: string) => apiClient.delete(`/notifications/${id}`),
+
+  pending: () => apiClient.get("/notifications/pending/upcoming"),
+
+  resend: (id: string) => apiClient.post(`/notifications/${id}/resend`, {}),
+
+  stats: () => apiClient.get("/notifications/stats/overview"),
+};

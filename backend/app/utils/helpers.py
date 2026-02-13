@@ -21,12 +21,25 @@ class SecurityUtils:
     
     @staticmethod
     def hash_password(password: str) -> str:
-        """Hash password using bcrypt."""
+        """Hash password using bcrypt.
+        
+        Note: bcrypt has a 72-byte limit. Passwords are truncated to 72 bytes
+        to prevent hashing errors.
+        """
+        # Truncate password to 72 bytes for bcrypt compatibility
+        password_bytes = password.encode('utf-8')[:72]
+        password = password_bytes.decode('utf-8', errors='ignore')
         return pwd_context.hash(password)
     
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:
-        """Verify password against hash."""
+        """Verify password against hash.
+        
+        Note: Truncates password to 72 bytes to match hashing behavior.
+        """
+        # Truncate password to 72 bytes for bcrypt compatibility
+        password_bytes = plain_password.encode('utf-8')[:72]
+        plain_password = password_bytes.decode('utf-8', errors='ignore')
         return pwd_context.verify(plain_password, hashed_password)
     
     @staticmethod

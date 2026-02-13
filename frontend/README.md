@@ -1,118 +1,169 @@
-FRONTEND - ContextMeet UI
+# ContextMeet Frontend
 
-Architecture: Component-based with Next.js
-Language: TypeScript + React
-Framework: Next.js 14 + Tailwind CSS
+AI-Powered Meeting Context Assistant - Frontend Application
 
-FOLDER STRUCTURE:
+## Overview
 
-src/
-app/ - Next.js app directory and pages
-components/ - Reusable React components
-services/ - API client and services
-hooks/ - Custom React hooks
-store/ - State management (Zustand)
-types/ - TypeScript type definitions
-utils/ - Utility functions
-public/ - Static assets
+This is the Next.js frontend for ContextMeet, a web application that helps users prepare for meetings by automatically generating AI-powered context, syncing with Google Calendar, and sending smart notifications.
 
-SETUP INSTRUCTIONS:
+## Tech Stack
 
-1. Install Node.js (18+ recommended)
+- **Framework**: Next.js 16.1.6 (App Router)
+- **Language**: TypeScript 5.3.3
+- **Styling**: Tailwind CSS 3.3.6
+- **State Management**: Zustand 4.4.2
+- **HTTP Client**: Axios 1.13.5
+- **Form Handling**: React Hook Form 7.48.0
+- **Validation**: Zod 3.22.4
+- **Date/Time**: date-fns 2.30.0
 
-2. Install dependencies:
-   npm install
+## Project Structure
 
-3. Configure environment:
-   cp .env.example .env.local
-   Update .env.local with your settings
+```
+frontend/src/
+├── app/                    # Next.js App Router pages
+│   ├── page.tsx           # Home page with auth redirect
+│   ├── login/             # Login page
+│   ├── register/          # Registration page
+│   ├── dashboard/         # Main dashboard
+│   ├── meetings/          # Meeting pages
+│   │   ├── page.tsx      # All meetings list
+│   │   ├── new/          # Create meeting form
+│   │   └── [id]/         # Meeting detail page
+│   ├── settings/          # User settings
+│   └── profile/           # User profile
+├── services/
+│   └── api.ts            # API client with all endpoints
+├── store/
+│   ├── auth.ts           # Authentication state
+│   ├── meetings.ts       # Meeting management state
+│   └── contexts.ts       # AI context state
+├── types/
+│   └── index.ts          # TypeScript interfaces
+└── styles/
+    └── globals.css       # Global Tailwind styles
+```
 
-4. Run development server:
-   npm run dev
+## Features Implemented
 
-Frontend will be available at: http://localhost:3000
+### Authentication
+- ✅ Email/password registration with validation
+- ✅ Login with JWT token management
+- ✅ Auto-redirect based on auth state
+- ✅ Session persistence via localStorage
+- ✅ Google OAuth button (placeholder)
+- ✅ Profile management page
 
-ARCHITECTURE PRINCIPLES:
+### Meeting Management
+- ✅ Create meetings with full details
+- ✅ View all meetings with filtering
+- ✅ Search meetings by title/description
+- ✅ Individual meeting detail page
+- ✅ Google Calendar sync button
+- ✅ Edit and delete meetings
 
-1. Component-Based
-   - Reusable components in components/ folder
-   - Single responsibility per component
-   - Props-driven and composable
+### AI Context Generation
+- ✅ Auto-generate AI context for meetings
+- ✅ Manual regenerate with force option
+- ✅ Display AI brief, key topics, checklist
+- ✅ Interactive checklist completion
+- ✅ Attendee insights display
 
-2. Type Safety
-   - Full TypeScript coverage
-   - Type definitions in types/ folder
-   - No any types used
+### Dashboard
+- ✅ Today's meetings section
+- ✅ Upcoming meetings list
+- ✅ Quick stats and actions
+- ✅ Google Calendar sync
+- ✅ AI Ready badges
 
-3. State Management
-   - Zustand for global state (auth, user)
-   - React hooks for local state
-   - Minimal state at top level
+## Getting Started
 
-4. Styling
-   - Tailwind CSS for styling
-   - Consistent color scheme
-   - No custom CSS unless necessary
-   - Light, professional design
-   - No emoji usage
+### Installation
 
-5. Performance
-   - Code splitting via dynamic imports
-   - Image optimization
-   - Lazy loading where applicable
-   - Proper caching strategies
+```bash
+cd frontend
+npm install
+```
 
-COMPONENT STRUCTURE:
+### Run Development Server
 
-Each component should:
+```bash
+npm run dev
+```
 
-- Be in its own file (kebab-case name)
-- Export as named export
-- Include proper TypeScript types
-- Have clear props interface
-- Max 300-400 lines per component
+Open [http://localhost:3000](http://localhost:3000)
 
-Example:
-src/components/MeetingCard.tsx
+### Build for Production
 
-- Displays a single meeting
-- Receives Meeting type as prop
-- Exports MeetingCard component
-- Fully typed and self-contained
+```bash
+npm run build
+npm start
+```
 
-STATE MANAGEMENT:
+## Environment Variables
 
-Using Zustand for:
+Create `.env.local`:
 
-- User authentication state
-- User preferences
-- Global notifications
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+```
 
-Using React hooks for:
+## API Integration
 
-- Form state
-- UI state (modals, dropdowns)
-- Temporary data
+All 51 backend endpoints integrated:
+- Auth API (6 endpoints)
+- Meetings API (8 endpoints)
+- Context API (6 endpoints)
+- Notifications API (7 endpoints)
 
-STYLING GUIDELINES:
+See `src/services/api.ts` for details.
 
-Colors:
+## State Management
 
-- Primary: #2563eb (blue-600)
-- Secondary: #1e40af (blue-800)
-- Success: #10b981 (green)
-- Error: #ef4444 (red)
-- Gray scale for neutral elements
+### Auth Store
+```typescript
+{
+  token, user, isAuthenticated
+  login(), register(), logout()
+}
+```
 
-Typography:
+### Meeting Store
+```typescript
+{
+  meetings, currentMeeting, isLoading
+  fetchMeetings(), createMeeting(), updateMeeting()
+}
+```
 
-- Headers: Bold, larger sizes
-- Body: Regular weight, readable
-- Labels: Medium weight
-- Muted text: gray-600
+### Context Store
+```typescript
+{
+  contexts, isGenerating
+  fetchContext(), generateContext()
+}
+```
 
-Spacing:
+## User Flow
 
-- Use Tailwind spacing scale (4px base)
-- Consistent padding and margins
-- Proper whitespace between sections
+1. Register/Login → Dashboard
+2. Create Meeting → Auto-generate AI context
+3. View Meeting Details → See AI preparation
+4. Configure Settings → Notifications & Calendar
+
+## Design System
+
+- **Colors**: Purple-Blue gradient theme
+- **Typography**: Tailwind font system
+- **Components**: Card-based layouts
+- **Responsive**: Mobile-first design
+
+## Testing with Backend
+
+1. Start backend: `uvicorn app.main:app --reload`
+2. Start frontend: `npm run dev`
+3. Test complete flow: Register → Create Meeting → Generate AI Context
+
+## License
+
+MIT License

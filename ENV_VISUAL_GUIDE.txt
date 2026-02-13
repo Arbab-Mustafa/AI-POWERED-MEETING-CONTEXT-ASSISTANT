@@ -1,0 +1,433 @@
+================================================================================
+ENVIRONMENT SETUP VISUAL FLOW DIAGRAM
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           START: ENVIRONMENT SETUP                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+        ┌─────────────────────────────────────────────────────────┐
+        │   PHASE 1: DATABASE SETUP (PostgreSQL) - 5 min         │
+        │   What: Install PostgreSQL, Create database            │
+        │   Where: https://postgresql.org/download               │
+        │   Get: DATABASE_URL, DATABASE_ASYNC_URL                │
+        └─────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+        ┌─────────────────────────────────────────────────────────┐
+        │   PHASE 2: SECURITY SETUP (Python Secret) - 1 min      │
+        │   What: Generate JWT signing key                       │
+        │   Command: python -c "import secrets;..."              │
+        │   Get: SECRET_KEY                                      │
+        └─────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+        ┌─────────────────────────────────────────────────────────┐
+        │   PHASE 3: OAUTH SETUP (Google Cloud) - 10 min         │
+        │   What: Create OAuth credentials for auth              │
+        │   Where: https://console.cloud.google.com              │
+        │   Enable: Calendar API, Gmail API                      │
+        │   Get: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET          │
+        └─────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+        ┌─────────────────────────────────────────────────────────┐
+        │   PHASE 4: EMAIL SETUP (Gmail App Password) - 3 min    │
+        │   What: Generate app-specific password for email       │
+        │   Where: https://myaccount.google.com/apppasswords     │
+        │   Get: GMAIL_EMAIL, GMAIL_APP_PASSWORD                 │
+        └─────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+        ┌─────────────────────────────────────────────────────────┐
+        │   PHASE 5: MESSAGING SETUP (Telegram Bot) - 2 min      │
+        │   What: Create Telegram bot for notifications          │
+        │   Where: Telegram @BotFather chat                      │
+        │   Get: TELEGRAM_BOT_TOKEN                              │
+        └─────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+        ┌─────────────────────────────────────────────────────────┐
+        │   PHASE 6: AI SETUP (Ollama & Mistral) - 10 min        │
+        │   What: Download local AI model                        │
+        │   Install: Ollama from https://ollama.ai               │
+        │   Command: ollama pull mistral                         │
+        │   Get: MISTRAL_BASE_URL                                │
+        └─────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+        ┌─────────────────────────────────────────────────────────┐
+        │   PHASE 7: FRONTEND CONFIG - 1 min                     │
+        │   What: Create .env.local for Next.js                  │
+        │   File: frontend/.env.local                            │
+        │   Variables: 4 frontend variables                      │
+        └─────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+        ┌─────────────────────────────────────────────────────────┐
+        │   PHASE 8: BACKEND CONFIG - 1 min                      │
+        │   What: Create .env for FastAPI                        │
+        │   File: backend/.env                                   │
+        │   Variables: 17 backend variables                      │
+        └─────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+        ┌─────────────────────────────────────────────────────────┐
+        │   VERIFICATION - 2 min                                 │
+        │   Check: PostgreSQL connection works                   │
+        │   Check: Ollama is running and Mistral exists          │
+        │   Check: .env files exist and properly formatted       │
+        │   Check: All services accessible                       │
+        └─────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+        ┌─────────────────────────────────────────────────────────┐
+        │   ✓ ENVIRONMENT SETUP COMPLETE ✓                      │
+        │                                                         │
+        │   Total Time: ~35 minutes (first setup)               │
+        │   Ready to: Start development servers                 │
+        └─────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+        ┌─────────────────────────────────────────────────────────┐
+        │   STARTUP SERVERS (3 Terminal Windows)                │
+        │                                                         │
+        │   Terminal 1 (Ollama):     ollama serve               │
+        │   Terminal 2 (Backend):    cd backend                 │
+        │                            python -m app.main         │
+        │   Terminal 3 (Frontend):   cd frontend                │
+        │                            npm run dev                │
+        │                                                         │
+        │   Access:                                              │
+        │   ├─ Frontend: http://localhost:3000                  │
+        │   ├─ Backend: http://localhost:8000                   │
+        │   ├─ API Docs: http://localhost:8000/docs             │
+        │   └─ Ollama: http://localhost:11434/api/tags          │
+        └─────────────────────────────────────────────────────────┘
+
+
+================================================================================
+DEPENDENCY DIAGRAM: What Depends on What
+================================================================================
+
+Google Cloud
+    │
+    ├─── GOOGLE_CLIENT_ID ──────────────┐
+    │                                    │
+    ├─── GOOGLE_CLIENT_SECRET ──────────┼──→ OAuth Authentication
+    │                                    │
+    └─── Calendar API + Gmail API ──────┘
+
+
+Gmail Account
+    │
+    ├─── GMAIL_EMAIL ──────────────┐
+    │                              │
+    └─── GMAIL_APP_PASSWORD ──────→ Email Notifications
+
+
+Telegram
+    │
+    └─── TELEGRAM_BOT_TOKEN ───────→ Message Notifications
+
+
+PostgreSQL Database
+    │
+    ├─── DATABASE_URL ──────────────┐
+    │                               │
+    └─── DATABASE_ASYNC_URL────────→ Data Storage
+
+
+Python Application
+    │
+    ├─── SECRET_KEY ────────────────┐
+    │                               │
+    ├─── ALGORITHM ─────────────────┤
+    │                               ├──→ JWT Authentication
+    └─── ACCESS_TOKEN_EXPIRE_MIN ───┘
+
+
+Ollama + Mistral
+    │
+    └─── MISTRAL_BASE_URL ─────────→ AI Context Generation
+
+
+All Services
+    │
+    ├─── ENVIRONMENT ───────────┐
+    │                           │
+    ├─── DEBUG ─────────────────┼──→ Application Configuration
+    │                           │
+    ├─── LOG_LEVEL ─────────────┤
+    │                           │
+    └─── ALLOWED_ORIGINS ──────→ CORS Security
+
+
+Frontend Application
+    │
+    ├─── NEXT_PUBLIC_API_URL ──────────┐
+    │                                  │
+    ├─── NEXT_PUBLIC_GOOGLE_CLIENT_ID ┼──→ Next.js Runtime
+    │                                  │
+    ├─── NEXT_PUBLIC_APP_NAME ─────────┤
+    │                                  │
+    └─── NEXT_PUBLIC_APP_VERSION ──────┘
+
+
+================================================================================
+SERVICE STARTUP SEQUENCE DIAGRAM
+================================================================================
+
+        USER STARTS DEVELOPMENT
+                 │
+                 ▼
+    ┌───────────────────────────────┐
+    │   Terminal 1: ollama serve     │    (Mistral AI Ready)
+    └───────────────────────────────┘
+                 │
+                 ▼
+    ┌───────────────────────────────┐
+    │   Terminal 2: Backend Start    │    (Depends on: PostgreSQL, .env)
+    │   python -m app.main           │
+    └───────────────────────────────┘
+                 │
+                 ▼
+    ┌───────────────────────────────┐
+    │   Terminal 3: Frontend Start   │    (Depends on: Backend, .env.local)
+    │   npm run dev                  │
+    └───────────────────────────────┘
+                 │
+                 ▼
+    ┌───────────────────────────────┐
+    │   http://localhost:3000        │    (Frontend HTML/JS)
+    │        │                       │
+    │        └──→ Auth Service       │
+    │             OAuth with Google  │
+    │             ↓                  │
+    │        Backend API             │
+    │        (http://localhost:8000) │
+    │             │                  │
+    │             ├──→ PostgreSQL    │
+    │             ├──→ Gmail SMTP    │
+    │             ├──→ Telegram API  │
+    │             └──→ Ollama        │
+    │                (Mistral AI)    │
+    │                                │
+    │        ✓ System Ready          │
+    └───────────────────────────────┘
+
+
+================================================================================
+SERVICES & THEIR CONFIGURATION VARIABLES
+================================================================================
+
+┌─ POSTGRESQL DATABASE ─────────────────────────────────────────────────┐
+│                                                                        │
+│ Variables Needed:                                                    │
+│  • DATABASE_URL (synchronous connection string)                      │
+│  • DATABASE_ASYNC_URL (async for FastAPI)                            │
+│                                                                        │
+│ Format:                                                              │
+│  postgresql://[user]:[password]@[host]:[port]/[database]            │
+│  Example: postgresql://postgres:pwd@localhost:5432/contextmeet      │
+│                                                                        │
+│ What it does:                                                        │
+│  • Stores all application data (users, meetings, contexts)           │
+│  • Accessed by backend service only                                  │
+│  • SQLAlchemy ORM converts to Python objects                         │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌─ GOOGLE OAUTH 2.0 ────────────────────────────────────────────────────┐
+│                                                                        │
+│ Variables Needed:                                                    │
+│  • GOOGLE_CLIENT_ID (OAuth identifier)                               │
+│  • GOOGLE_CLIENT_SECRET (OAuth verification)                         │
+│  • GOOGLE_REDIRECT_URI (where to send user after login)              │
+│                                                                        │
+│ What it does:                                                        │
+│  • Authenticates users with their Google accounts                    │
+│  • Grants access to their Google Calendar                            │
+│  • Grants access to send emails via Gmail                            │
+│  • User consent screen shown first time                              │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌─ GMAIL SMTP ──────────────────────────────────────────────────────────┐
+│                                                                        │
+│ Variables Needed:                                                    │
+│  • GMAIL_EMAIL (sender address)                                      │
+│  • GMAIL_APP_PASSWORD (special password for this app only)            │
+│                                                                        │
+│ What it does:                                                        │
+│  • Sends email notifications to users                                │
+│  • Topics: meeting summaries, reminders, alerts                      │
+│  • App password is for security (not your real Gmail password)       │
+│  • NEVER use your real Gmail password here!                          │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌─ TELEGRAM BOT API ────────────────────────────────────────────────────┐
+│                                                                        │
+│ Variables Needed:                                                    │
+│  • TELEGRAM_BOT_TOKEN (bot authentication)                           │
+│                                                                        │
+│ What it does:                                                        │
+│  • Sends WhatsApp-like messages to users                             │
+│  • Users chat with @contextmeet_bot                                  │
+│  • Receives meeting reminders, context, alerts                       │
+│  • Completely free, unlimited messages                               │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌─ OLLAMA & MISTRAL ────────────────────────────────────────────────────┐
+│                                                                        │
+│ Variables Needed:                                                    │
+│  • MISTRAL_BASE_URL (local Ollama API endpoint)                      │
+│                                                                        │
+│ What it does:                                                        │
+│  • Runs AI model locally (no external API calls)                     │
+│  • Generates intelligent meeting briefs/context                      │
+│  • Absolutely free (runs on your computer)                           │
+│  • Private (data never leaves your system)                           │
+│  • Must be running in background: ollama serve                       │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌─ APPLICATION SECURITY ────────────────────────────────────────────────┐
+│                                                                        │
+│ Variables Needed:                                                    │
+│  • SECRET_KEY (JWT token signing - very sensitive!)                  │
+│  • ALGORITHM (token algorithm - default HS256)                       │
+│  • ACCESS_TOKEN_EXPIRE_MINUTES (token lifetime)                      │
+│                                                                        │
+│ What it does:                                                        │
+│  • SECRET_KEY signs JWT tokens (authentication tokens)               │
+│  • Never share this key! It authenticates all users!                 │
+│  • If leaked, attackers can forge tokens                             │
+│  • Regenerate if you suspect it's been compromised                   │
+└────────────────────────────────────────────────────────────────────────┘
+
+┌─ CORS & NETWORKING ───────────────────────────────────────────────────┐
+│                                                                        │
+│ Variables Needed:                                                    │
+│  • ALLOWED_ORIGINS (which domains can call backend)                  │
+│                                                                        │
+│ What it does:                                                        │
+│  • Prevents unauthorized domains from accessing API                  │
+│  • Frontend at http://localhost:3000 is allowed                      │
+│  • Any other origin is rejected (security!)                          │
+│  • Add your production domain later                                  │
+└────────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+ENVIRONMENT VARIABLE CATEGORIES
+================================================================================
+
+CATEGORY 1: DATABASE CREDENTIALS
+├─ DATABASE_URL
+├─ DATABASE_ASYNC_URL
+└─ Sensitivity: HIGH (contains password)
+
+CATEGORY 2: AUTHENTICATION & SECURITY
+├─ SECRET_KEY
+├─ GOOGLE_CLIENT_ID
+├─ GOOGLE_CLIENT_SECRET
+├─ ALGORITHM
+├─ ACCESS_TOKEN_EXPIRE_MINUTES
+└─ Sensitivity: HIGH (used for authentication)
+
+CATEGORY 3: THIRD-PARTY SERVICE KEYS
+├─ GMAIL_EMAIL
+├─ GMAIL_APP_PASSWORD
+├─ TELEGRAM_BOT_TOKEN
+├─ MISTRAL_BASE_URL
+└─ Sensitivity: HIGH/MEDIUM
+
+CATEGORY 4: APPLICATION CONFIGURATION
+├─ ENVIRONMENT
+├─ DEBUG
+├─ LOG_LEVEL
+├─ ALLOWED_ORIGINS
+└─ Sensitivity: LOW (non-sensitive)
+
+CATEGORY 5: FRONTEND CONFIGURATION
+├─ NEXT_PUBLIC_API_URL
+├─ NEXT_PUBLIC_GOOGLE_CLIENT_ID
+├─ NEXT_PUBLIC_APP_NAME
+├─ NEXT_PUBLIC_APP_VERSION
+└─ Sensitivity: LOW (these are public)
+
+================================================================================
+GITHUB SECURITY: PROTECTING YOUR SECRETS
+================================================================================
+
+NEVER commit these to GitHub:
+├─ backend/.env (contains all secrets) ✓ Already in .gitignore
+├─ frontend/.env.local (contains secrets) ✓ Already in .gitignore
+└─ ANY private keys or passwords
+
+Safe to commit to GitHub:
+├─ backend/.env.example (template with dummy values)
+├─ frontend/.env.example (template with dummy values)
+├─ source code
+└─ documentation
+
+When sharing code with team:
+1. Share .env.example (template only)
+2. Share .env.local.example (template only)
+3. Team generates their own secrets
+4. Team fills in their own credentials
+5. WARNING: Tell them to add to .gitignore!
+
+If you accidentally commit secrets:
+1. Delete the commit from history (git filter-branch)
+2. Regenerate all compromised tokens
+3. Rotate all passwords
+4. Never reuse the file history
+
+
+================================================================================
+WHAT EACH SERVICE NEEDS TO WORK
+================================================================================
+
+PostgreSQL:
+  MUST HAVE: Database running, connection string correct
+  MUST BE: Windows service "PostgreSQL" running (Services app)
+  NICE TO HAVE: pgAdmin for visual management
+
+Google Cloud:
+  MUST HAVE: Project created, APIs enabled
+  MUST HAVE: OAuth consent screen configured
+  MUST HAVE: Credentials created with correct redirect URIs
+  MUST HAVE: Test user added (your Gmail)
+  NICE TO HAVE: Monthly quota monitoring
+
+Gmail:
+  MUST HAVE: Gmail account
+  MUST HAVE: 2-Step Verification enabled (security requirement)
+  MUST HAVE: App-specific password generated
+  MUST NOT: Use your actual Gmail password
+
+Telegram:
+  MUST HAVE: Telegram account
+  MUST HAVE: Bot created via @BotFather
+  MUST NOT: Hardcode token in code (use .env file)
+  NICE TO HAVE: Test bot with /help command
+
+Ollama/Mistral:
+  MUST HAVE: Ollama installed (works on Mac/Windows/Linux)
+  MUST HAVE: Mistral model pulled (ollama pull mistral)
+  MUST BE: Running in background (ollama serve)
+  MUST NOT: Be on public internet (local only for safety)
+  MEMORY: Needs ~4GB RAM minimum
+
+Frontend (.env.local):
+  MUST HAVE: Correct API endpoint (http://localhost:8000)
+  MUST HAVE: Correct Google Client ID
+  MUST NOT: Contain any secrets (it's public)
+
+Backend (.env):
+  MUST HAVE: ALL 17 variables set
+  MUST NOT: Be committed to GitHub
+  MUST BE: Located in backend/ root directory
+  MUST NOT: Contain quotes or spaces (formatting matters)
+
+================================================================================

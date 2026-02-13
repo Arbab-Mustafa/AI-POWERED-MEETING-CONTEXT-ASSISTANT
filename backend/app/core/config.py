@@ -4,8 +4,9 @@ Handles all settings, database initialization, and application setup.
 """
 
 import os
-from typing import Optional
+from typing import Optional, Union
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 import logging
@@ -52,14 +53,22 @@ class Settings(BaseSettings):
     # Mistral AI
     MISTRAL_BASE_URL: str = os.getenv("MISTRAL_BASE_URL", "http://localhost:11434")
     
-    # CORS
-    ALLOWED_ORIGINS: list = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+    # CORS (comma-separated string in .env, converted to list)
+    ALLOWED_ORIGINS: Union[str, list] = "http://localhost:3000"
     
     # Sentry
     SENTRY_DSN: Optional[str] = os.getenv("SENTRY_DSN")
     
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+    
+    @field_validator('ALLOWED_ORIGINS', mode='before')
+    @classmethod
+    def parse_cors_origins(cls, v):
+        """Convert comma-separated string to list."""
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(',')]
+        return v
     
     class Config:
         env_file = ".env"

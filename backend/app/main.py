@@ -11,6 +11,12 @@ from datetime import datetime
 
 from app.core.config import settings, db_manager
 from app.schemas.base import ErrorResponse
+from app.controllers import (
+    auth_router,
+    meeting_router,
+    context_router,
+    notification_router
+)
 
 
 logger = logging.getLogger(__name__)
@@ -36,11 +42,12 @@ def create_app() -> FastAPI:
         allow_headers=["*"]
     )
     
-    # Security middleware
-    app.add_middleware(
-        TrustedHostMiddleware,
-        allowed_hosts=settings.ALLOWED_ORIGINS
-    )
+    # Security middleware - Allow localhost and common development hosts
+    if not settings.DEBUG:
+        app.add_middleware(
+            TrustedHostMiddleware,
+            allowed_hosts=["localhost", "127.0.0.1", settings.APP_NAME]
+        )
     
     # Custom exception handler
     @app.exception_handler(Exception)
@@ -89,14 +96,27 @@ def create_app() -> FastAPI:
             "environment": settings.ENVIRONMENT
         }
     
-    # API v1 routes placeholder (will add in next phase)
+    # Register API routers
+    app.include_router(auth_router, prefix="/api/v1")
+    app.include_router(meeting_router, prefix="/api/v1")
+    app.include_router(context_router, prefix="/api/v1")
+    app.include_router(notification_router, prefix="/api/v1")
+    
+    # API v1 root endpoint
     @app.get("/api/v1")
     async def api_root():
         """API root endpoint."""
         return {
             "name": settings.APP_NAME,
             "version": settings.APP_VERSION,
-            "status": "running"
+            "status": "running",
+            "endpoints": {
+                "auth": "/api/v1/auth",
+                "meetings": "/api/v1/meetings",
+                "contexts": "/api/v1/contexts",
+                "notifications": "/api/v1/notifications",
+                "docs": "/docs" if settings.DEBUG else None
+            }
         }
     
     logger.info("FastAPI application configured successfully")

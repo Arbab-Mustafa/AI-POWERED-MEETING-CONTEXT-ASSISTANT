@@ -19,7 +19,9 @@ export interface Meeting {
   attendees: Attendee[];
   meeting_link?: string;
   meeting_platform: string;
+  location?: string;
   context_generated: boolean;
+  has_context?: boolean; // Alias for context_generated for easier reading
   is_confirmed: boolean;
   notes?: string;
   created_at: string;
@@ -38,6 +40,7 @@ export interface Context {
   key_topics: string[];
   preparation_checklist: ChecklistItem[];
   attendee_context: Record<string, string>;
+  confidence_score?: number;
   generated_at: string;
   ai_model_version: string;
   user_edited: boolean;
