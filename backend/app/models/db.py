@@ -23,6 +23,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=True)
     
     google_token = Column(Text, nullable=True)
+    google_refresh_token = Column(Text, nullable=True)
     google_token_expiry = Column(DateTime, nullable=True)
     telegram_chat_id = Column(BigInteger, nullable=True, unique=True)
     telegram_verified = Column(Boolean, default=False)

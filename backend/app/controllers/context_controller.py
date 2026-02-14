@@ -17,7 +17,7 @@ from app.core.config import logger
 router = APIRouter(prefix="/contexts", tags=["contexts"])
 
 
-@router.get("/meeting/{meeting_id}", response_model=ContextResponse)
+@router.get("/meeting/{meeting_id}", response_model=Optional[ContextResponse])
 async def get_meeting_context(
     meeting_id: UUID,
     current_user = Depends(get_current_user),
@@ -32,7 +32,7 @@ async def get_meeting_context(
         db: Database session
     
     Returns:
-        Meeting context with AI brief and insights
+        Meeting context with AI brief and insights, or None if not generated yet
     """
     try:
         context_repo = ContextRepository(db)
@@ -52,16 +52,13 @@ async def get_meeting_context(
                 detail="Access denied"
             )
         
-        # Get context
+        # Get context - return None if not generated yet (not an error)
         context = await context_repo.get_by_meeting_id(meeting_id)
         
         if not context:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Context not generated yet"
-            )
+            return None
         
-        return ContextResponse.from_orm(context)
+        return ContextResponse.model_validate(context)
         
     except HTTPException:
         raise
@@ -117,33 +114,45 @@ async def generate_context(
         existing_context = await context_repo.get_by_meeting_id(meeting_id)
         
         if existing_context and not force_regenerate:
-            return ContextResponse.from_orm(existing_context)
+            return ContextResponse.model_validate(existing_context)
         
         # Generate AI context using Mistral
         logger.info(f"Generating AI context for meeting {meeting_id}")
-        context = await context_service.generate_and_create_context(
-            meeting_id=meeting_id,
-            user_id=current_user.id,
-            force_regenerate=force_regenerate
-        )
         
-        if not context:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Context generation failed"
+        try:
+            context = await context_service.generate_and_create_context(
+                meeting_id=meeting_id,
+                user_id=current_user.id,
+                force_regenerate=force_regenerate
             )
-        
-        logger.info(f"Context generated for meeting {meeting_id} with confidence {context.confidence_score}")
-        
-        return ContextResponse.from_orm(context)
+            
+            if not context:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="AI service (Ollama) is not available. Please ensure Ollama is running with: ollama serve"
+                )
+            
+            logger.info(f"Context generated for meeting {meeting_id} with confidence {context.confidence_score}")
+            return ContextResponse.model_validate(context)
+            
+        except Exception as ai_error:
+            # Check if it's an Ollama connection error
+            error_msg = str(ai_error).lower()
+            logger.error(f"AI error during context generation: {ai_error}", exc_info=True)
+            if "connection" in error_msg or "refused" in error_msg or "11434" in error_msg:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="AI service (Ollama) is not running. Please start Ollama with 'ollama serve' and ensure the Mistral model is available."
+                )
+            raise
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error generating context for meeting {meeting_id}: {str(e)}")
+        logger.error(f"Error generating context for meeting {meeting_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate context"
+            detail=f"Failed to generate context: {str(e)}"
         )
 
 
@@ -184,14 +193,14 @@ async def update_context(
             )
         
         # Update context
-        update_data = context_data.dict(exclude_unset=True)
+        update_data = context_data.model_dump(exclude_unset=True)
         update_data["user_edited"] = True
         
         updated_context = await context_repo.update(context_id, update_data)
         
         logger.info(f"Context updated: {context_id} by user {current_user.email}")
         
-        return ContextResponse.from_orm(updated_context)
+        return ContextResponse.model_validate(updated_context)
         
     except HTTPException:
         raise
@@ -273,7 +282,7 @@ async def get_recent_contexts(
             limit=limit
         )
         
-        return [ContextResponse.from_orm(context) for context in contexts]
+        return [ContextResponse.model_validate(context) for context in contexts]
         
     except Exception as e:
         logger.error(f"Error fetching recent contexts: {str(e)}")

@@ -49,7 +49,7 @@ async def get_notifications(
             status=status_filter
         )
         
-        return [NotificationResponse.from_orm(notif) for notif in notifications]
+        return [NotificationResponse.model_validate(notif) for notif in notifications]
         
     except Exception as e:
         logger.error(f"Error fetching notifications: {str(e)}")
@@ -104,7 +104,7 @@ async def schedule_notification(
         
         logger.info(f"Notification scheduled: {notification.id} for meeting {notification_data.meeting_id}")
         
-        return NotificationResponse.from_orm(notification)
+        return NotificationResponse.model_validate(notification)
         
     except HTTPException:
         raise
@@ -164,7 +164,7 @@ async def auto_schedule_notifications(
         
         logger.info(f"Auto-scheduled {len(notifications)} notifications for meeting {meeting_id}")
         
-        return [NotificationResponse.from_orm(notif) for notif in notifications]
+        return [NotificationResponse.model_validate(notif) for notif in notifications]
         
     except HTTPException:
         raise
@@ -257,7 +257,7 @@ async def get_pending_notifications(
             before_time=end_time
         )
         
-        return [NotificationResponse.from_orm(notif) for notif in notifications]
+        return [NotificationResponse.model_validate(notif) for notif in notifications]
         
     except Exception as e:
         logger.error(f"Error fetching pending notifications: {str(e)}")
@@ -317,7 +317,7 @@ async def resend_notification(
             await notification_service.mark_sent(notification.id)
             updated_notification = await notification_repo.get_by_id(notification_id)
             logger.info(f"Notification resent successfully: {notification_id}")
-            return NotificationResponse.from_orm(updated_notification)
+            return NotificationResponse.model_validate(updated_notification)
         else:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -155,16 +155,16 @@ Respond ONLY with valid JSON, no additional text."""
                 # Validate and return structured context
                 return {
                     "meeting_type": data.get("meeting_type", "general"),
-                    "brief": data.get("ai_brief", ""),
-                    "topics": data.get("key_topics", []),
-                    "checklist": data.get("preparation_checklist", []),
-                    "agenda": data.get("suggested_agenda", []),
-                    "importance": data.get("estimated_importance", "medium"),
-                    "prep_time": data.get("recommended_prep_time", "15"),
-                    "attendees": data.get("attendee_roles", {}),
-                    "outcomes": data.get("potential_outcomes", []),
-                    "follow_up": data.get("follow_up_suggestions", []),
-                    "confidence": 85  # Base confidence score
+                    "ai_brief": data.get("ai_brief", data.get("brief", "")),  # Support both keys
+                    "key_topics": data.get("key_topics", data.get("topics", [])),
+                    "preparation_checklist": data.get("preparation_checklist", data.get("checklist", [])),
+                    "suggested_agenda": data.get("suggested_agenda", data.get("agenda", [])),
+                    "estimated_importance": data.get("estimated_importance", data.get("importance", "medium")),
+                    "recommended_prep_time": data.get("recommended_prep_time", data.get("prep_time", "15")),
+                    "attendee_context": data.get("attendee_roles", data.get("attendees", {})),
+                    "potential_outcomes": data.get("potential_outcomes", data.get("outcomes", [])),
+                    "follow_up_suggestions": data.get("follow_up_suggestions", data.get("follow_up", [])),
+                    "confidence_score": 85  # Base confidence score
                 }
             else:
                 raise ValueError("No valid JSON found in response")
@@ -182,16 +182,16 @@ Respond ONLY with valid JSON, no additional text."""
         
         return {
             "meeting_type": "general",
-            "brief": f"Meeting: {title}. {description or 'No description provided.'}",
-            "topics": ["Meeting objectives", "Key discussion points"],
-            "checklist": ["Review meeting agenda", "Prepare questions", "Gather relevant materials"],
-            "agenda": ["Introduction", "Main discussion", "Action items", "Next steps"],
-            "importance": "medium",
-            "prep_time": "10",
-            "attendees": {},
-            "outcomes": ["Clear action items", "Next steps defined"],
-            "follow_up": ["Send meeting notes", "Schedule follow-up if needed"],
-            "confidence": 50  # Low confidence for fallback
+            "ai_brief": f"Meeting: {title}. {description or 'No description provided.'}",
+            "key_topics": ["Meeting objectives", "Key discussion points", "Action items"],
+            "preparation_checklist": ["Review meeting agenda", "Prepare questions", "Gather relevant materials"],
+            "suggested_agenda": ["Introduction and context", "Main discussion topics", "Decision points", "Action items and next steps"],
+            "estimated_importance": "medium",
+            "recommended_prep_time": "10",
+            "attendee_context": {},
+            "potential_outcomes": ["Clear action items", "Next steps defined", "Alignment achieved"],
+            "follow_up_suggestions": ["Send meeting notes", "Schedule follow-up if needed", "Track action items"],
+            "confidence_score": 50  # Low confidence for fallback
         }
     
     async def generate_batch_contexts(

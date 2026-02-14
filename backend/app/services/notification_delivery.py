@@ -30,7 +30,8 @@ class EmailNotificationService:
         to_email: str,
         meeting: Meeting,
         context: Optional[Context] = None,
-        minutes_until: int = 15
+        minutes_until: int = 30,
+        to_all_attendees: bool = False
     ) -> bool:
         """
         Send meeting reminder email.
@@ -50,7 +51,12 @@ class EmailNotificationService:
             msg = MIMEMultipart('alternative')
             msg['From'] = f"ContextMeet <{self.sender_email}>"
             msg['To'] = to_email
-            msg['Subject'] = f"Reminder: {meeting.title} in {minutes_until} minutes"
+            
+            # Different subject line for meeting creation vs reminders
+            if minutes_until == 0:
+                msg['Subject'] = f"Meeting Created: {meeting.title}"
+            else:
+                msg['Subject'] = f"Reminder: {meeting.title} in {minutes_until} minutes"
             
             # Create HTML content
             html_content = self._build_reminder_html(meeting, context, minutes_until)
@@ -119,7 +125,7 @@ class EmailNotificationService:
                 <p><strong>Time:</strong> {start_time_str}</p>
                 <p><strong>Duration:</strong> {self._calculate_duration(meeting)} minutes</p>
                 {f'<p><strong>Description:</strong> {meeting.description}</p>' if meeting.description else ''}
-                {f'<p><strong>Attendees:</strong> {", ".join(meeting.attendees[:5])}</p>' if meeting.attendees else ''}
+                {f'<p><strong>Attendees:</strong> {", ".join([a if isinstance(a, str) else (a.get("email") or a.get("name", "Unknown")) for a in meeting.attendees[:5]])}</p>' if meeting.attendees else ''}
             </div>
 """
         
@@ -193,7 +199,8 @@ Duration: {self._calculate_duration(meeting)} minutes
             text += f"Description: {meeting.description}\n"
         
         if meeting.attendees:
-            text += f"Attendees: {', '.join(meeting.attendees[:5])}\n"
+            attendee_names = [a if isinstance(a, str) else (a.get('email') or a.get('name', 'Unknown')) for a in meeting.attendees[:5]]
+            text += f"Attendees: {', '.join(attendee_names)}\n"
         
         if context and context.ai_brief:
             text += f"\nAI-GENERATED CONTEXT:\n{context.ai_brief}\n"
@@ -322,7 +329,8 @@ class TelegramNotificationService:
             message += f"• Description: {desc}\n"
         
         if meeting.attendees:
-            attendee_list = ', '.join(meeting.attendees[:3])
+            attendee_names = [a if isinstance(a, str) else (a.get('email') or a.get('name', 'Unknown')) for a in meeting.attendees[:3]]
+            attendee_list = ', '.join(attendee_names)
             if len(meeting.attendees) > 3:
                 attendee_list += f" +{len(meeting.attendees) - 3} more"
             message += f"• Attendees: {attendee_list}\n"

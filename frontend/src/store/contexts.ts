@@ -8,10 +8,13 @@ interface ContextState {
   isLoading: boolean;
   isGenerating: boolean;
   error: string | null;
-  
+
   // Actions
   fetchContext: (meetingId: string) => Promise<void>;
-  generateContext: (meetingId: string, forceRegenerate?: boolean) => Promise<Context | null>;
+  generateContext: (
+    meetingId: string,
+    forceRegenerate?: boolean,
+  ) => Promise<Context | null>;
   updateContext: (contextId: string, data: any) => Promise<void>;
   deleteContext: (contextId: string) => Promise<void>;
   fetchRecentContexts: (limit?: number) => Promise<void>;
@@ -30,16 +33,35 @@ export const useContextStore = create<ContextState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const context = await contextAPI.getByMeeting(meetingId);
-      set({ 
+
+      // Handle null response (context not generated yet)
+      if (!context) {
+        set({
+          currentContext: null,
+          isLoading: false,
+        });
+        return;
+      }
+
+      set({
         contexts: { ...get().contexts, [meetingId]: context },
         currentContext: context,
-        isLoading: false 
+        isLoading: false,
       });
     } catch (error: any) {
-      set({ 
-        error: error.response?.data?.detail || "Failed to fetch context",
-        isLoading: false 
-      });
+      // Don't treat 404 as error - context may not be generated yet
+      if (error.response?.status === 404) {
+        set({
+          currentContext: null,
+          isLoading: false,
+          error: null,
+        });
+      } else {
+        set({
+          error: error.response?.data?.detail || "Failed to fetch context",
+          isLoading: false,
+        });
+      }
     }
   },
 
@@ -47,16 +69,16 @@ export const useContextStore = create<ContextState>((set, get) => ({
     try {
       set({ isGenerating: true, error: null });
       const context = await contextAPI.generate(meetingId, forceRegenerate);
-      set({ 
+      set({
         contexts: { ...get().contexts, [meetingId]: context },
         currentContext: context,
-        isGenerating: false 
+        isGenerating: false,
       });
       return context;
     } catch (error: any) {
-      set({ 
+      set({
         error: error.response?.data?.detail || "Failed to generate context",
-        isGenerating: false 
+        isGenerating: false,
       });
       return null;
     }
@@ -67,15 +89,15 @@ export const useContextStore = create<ContextState>((set, get) => ({
       set({ isLoading: true, error: null });
       const updated = await contextAPI.update(contextId, data);
       const meetingId = updated.meeting_id;
-      set({ 
+      set({
         contexts: { ...get().contexts, [meetingId]: updated },
         currentContext: updated,
-        isLoading: false 
+        isLoading: false,
       });
     } catch (error: any) {
-      set({ 
+      set({
         error: error.response?.data?.detail || "Failed to update context",
-        isLoading: false 
+        isLoading: false,
       });
     }
   },
@@ -86,16 +108,16 @@ export const useContextStore = create<ContextState>((set, get) => ({
       await contextAPI.delete(contextId);
       const newContexts = { ...get().contexts };
       const meetingId = Object.keys(newContexts).find(
-        key => newContexts[key].id === contextId
+        (key) => newContexts[key].id === contextId,
       );
       if (meetingId) {
         delete newContexts[meetingId];
       }
       set({ contexts: newContexts, currentContext: null, isLoading: false });
     } catch (error: any) {
-      set({ 
+      set({
         error: error.response?.data?.detail || "Failed to delete context",
-        isLoading: false 
+        isLoading: false,
       });
     }
   },
@@ -110,9 +132,10 @@ export const useContextStore = create<ContextState>((set, get) => ({
       });
       set({ contexts: { ...get().contexts, ...contextMap }, isLoading: false });
     } catch (error: any) {
-      set({ 
-        error: error.response?.data?.detail || "Failed to fetch recent contexts",
-        isLoading: false 
+      set({
+        error:
+          error.response?.data?.detail || "Failed to fetch recent contexts",
+        isLoading: false,
       });
     }
   },

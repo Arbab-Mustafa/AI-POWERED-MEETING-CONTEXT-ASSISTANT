@@ -17,6 +17,10 @@ class APIClient {
       },
     });
 
+    // Load token from localStorage on initialization
+    this.token =
+      typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+
     this.setupInterceptors();
   }
 
@@ -100,8 +104,11 @@ export const authAPI = {
 
   me: () => apiClient.get("/auth/me"),
 
-  googleCallback: (code: string) =>
-    apiClient.post("/auth/google/callback", { code }),
+  googleCallback: (code: string, redirectUri: string) =>
+    apiClient.post("/auth/google/callback", {
+      code,
+      redirect_uri: redirectUri,
+    }),
 
   refresh: () => apiClient.post("/auth/refresh", {}),
 
@@ -117,7 +124,12 @@ export const meetingsAPI = {
     limit?: number;
     search?: string;
     status?: string;
-  }) => apiClient.get(`/meetings?${new URLSearchParams(params as any)}`),
+  }) => {
+    const queryString = params
+      ? "?" + new URLSearchParams(params as any).toString()
+      : "";
+    return apiClient.get(`/meetings${queryString}`);
+  },
 
   get: (id: string) => apiClient.get(`/meetings/${id}`),
 

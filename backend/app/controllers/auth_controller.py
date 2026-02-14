@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings, DatabaseManager
 from app.services.base import AuthService
 from app.repositories.base import UserRepository
-from app.schemas.base import UserCreate, LoginRequest, UserResponse, TokenResponse
+from app.schemas.base import UserCreate, LoginRequest, UserResponse, TokenResponse, GoogleCallbackRequest
 from app.utils.helpers import SecurityUtils
 from app.core.config import logger
 
@@ -133,16 +133,17 @@ async def register(
         return TokenResponse(
             access_token=access_token,
             token_type="bearer",
-            user=UserResponse.from_orm(user)
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            user=UserResponse.model_validate(user)
         )
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Registration error: {str(e)}")
+        logger.error(f"Registration error: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Registration failed"
+            detail=f"Registration failed: {str(e)}"
         )
 
 
@@ -184,7 +185,8 @@ async def login(
         return TokenResponse(
             access_token=access_token,
             token_type="bearer",
-            user=UserResponse.from_orm(user)
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            user=UserResponse.model_validate(user)
         )
         
     except HTTPException:
@@ -210,31 +212,36 @@ async def get_current_user_info(
     Returns:
         User information
     """
-    return UserResponse.from_orm(current_user)
+    return UserResponse.model_validate(current_user)
 
 
 @router.post("/google/callback", response_model=TokenResponse)
 async def google_oauth_callback(
-    code: str,
+    request: GoogleCallbackRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """
     Handle Google OAuth callback.
     
     Args:
-        code: Authorization code from Google
+        request: Google callback request with authorization code
         db: Database session
     
     Returns:
         JWT access token and user information
     """
     try:
+        logger.info(f"Google OAuth callback - Code: {request.code[:20]}..., Redirect URI: {request.redirect_uri}")
         auth_service = AuthService(db)
         
         # Exchange code for user info and create/get user
-        user =await auth_service.get_or_create_google_user(code)
+        user = await auth_service.get_or_create_google_user(
+            request.code,
+            request.redirect_uri
+        )
         
         if not user:
+            logger.error("Failed to get or create user from Google OAuth")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to authenticate with Google"
@@ -250,7 +257,8 @@ async def google_oauth_callback(
         return TokenResponse(
             access_token=access_token,
             token_type="bearer",
-            user=UserResponse.from_orm(user)
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            user=UserResponse.model_validate(user)
         )
         
     except HTTPException:
@@ -285,7 +293,7 @@ async def refresh_token(
         return TokenResponse(
             access_token=access_token,
             token_type="bearer",
-            user=UserResponse.from_orm(current_user)
+            user=UserResponse.model_validate(current_user)
         )
         
     except Exception as e:

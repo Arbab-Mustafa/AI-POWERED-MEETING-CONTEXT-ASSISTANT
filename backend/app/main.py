@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from datetime import datetime
 
 from app.core.config import settings, db_manager
@@ -16,6 +17,15 @@ from app.controllers import (
     meeting_router,
     context_router,
     notification_router
+)
+from app.tasks.scheduler import start_notification_scheduler, shutdown_scheduler
+from app.agents import (
+    orchestrator,
+    start_agent_system,
+    shutdown_agent_system,
+    NotificationAgent,
+    ContextAgent,
+    MonitorAgent
 )
 
 
@@ -49,6 +59,22 @@ def create_app() -> FastAPI:
             allowed_hosts=["localhost", "127.0.0.1", settings.APP_NAME]
         )
     
+    # Validation error handler (422 errors)
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        """Handle request validation errors with detailed info."""
+        logger.error(f"Validation error: {exc.errors()}")
+        
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": "validation_error",
+                "message": "Request validation failed",
+                "details": exc.errors(),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        )
+    
     # Custom exception handler
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
@@ -68,10 +94,22 @@ def create_app() -> FastAPI:
     # Startup event
     @app.on_event("startup")
     async def startup():
-        """Initialize database on startup."""
+        """Initialize database and start background tasks."""
         try:
             await db_manager.initialize()
             logger.info(f"Application started in {settings.ENVIRONMENT} mode")
+            
+            # Start notification scheduler (legacy - will be replaced by NotificationAgent)
+            await start_notification_scheduler()
+            logger.info("Background notification scheduler started")
+            
+            # Register and start all AI agents
+            orchestrator.register_agent(NotificationAgent())
+            orchestrator.register_agent(ContextAgent())
+            orchestrator.register_agent(MonitorAgent())
+            
+            await start_agent_system()
+            logger.info("✅ Multi-AI agent system started")
         except Exception as e:
             logger.error(f"Startup error: {e}")
             raise
@@ -81,6 +119,14 @@ def create_app() -> FastAPI:
     async def shutdown():
         """Cleanup resources on shutdown."""
         try:
+            # Shutdown AI agents
+            await shutdown_agent_system()
+            logger.info("Multi-AI agent system stopped")
+            
+            # Shutdown scheduler
+            await shutdown_scheduler()
+            
+            # Close database
             await db_manager.dispose()
             logger.info("Application shutdown")
         except Exception as e:
@@ -95,6 +141,12 @@ def create_app() -> FastAPI:
             "timestamp": datetime.utcnow().isoformat(),
             "environment": settings.ENVIRONMENT
         }
+    
+    # Agent system status endpoint
+    @app.get("/api/v1/system/agents")
+    async def agent_status():
+        """Get status of all AI agents."""
+        return orchestrator.get_status()
     
     # Register API routers
     app.include_router(auth_router, prefix="/api/v1")

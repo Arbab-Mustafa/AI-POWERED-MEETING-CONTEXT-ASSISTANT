@@ -87,10 +87,22 @@ class DatabaseManager:
     
     async def initialize(self):
         """Initialize async database engine and session factory."""
+        # Clean URL by removing sslmode parameters (handled in connect_args)
+        import re
+        clean_url = re.sub(r'[?&]sslmode=\w+', '', settings.DATABASE_ASYNC_URL)
+        clean_url = re.sub(r'[?&]channel_binding=\w+', '', clean_url)
+        
+        # Create SSL context for Neon
+        import ssl
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        
         self.engine = create_async_engine(
-            settings.DATABASE_ASYNC_URL,
+            clean_url,
             echo=settings.DEBUG,
-            future=True
+            future=True,
+            connect_args={"ssl": ssl_context}
         )
         self.AsyncSessionLocal = sessionmaker(
             self.engine,

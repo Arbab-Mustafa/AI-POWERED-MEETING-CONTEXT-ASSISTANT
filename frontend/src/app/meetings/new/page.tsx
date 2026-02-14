@@ -64,8 +64,8 @@ export default function NewMeetingPage() {
         start_time: new Date(formData.start_time).toISOString(),
         end_time: new Date(formData.end_time).toISOString(),
         attendees: attendees.length > 0 ? attendees : undefined,
-        meeting_link: formData.meeting_link || undefined,
-        location: formData.location || undefined,
+        meeting_link: formData.meeting_link || formData.location || undefined,
+        // Note: location is stored in meeting_link field for now
       };
 
       const newMeeting = await createMeeting(meetingData);

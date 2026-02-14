@@ -4,8 +4,8 @@ Separate schemas for request (Create) and response (Read) operations.
 """
 
 from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, List, Dict, Any, Union
+from pydantic import BaseModel, EmailStr, Field, field_validator
 import uuid
 
 
@@ -56,14 +56,35 @@ class MeetingBase(BaseModel):
     description: Optional[str] = None
     start_time: datetime
     end_time: datetime
-    attendees: List[Dict[str, Any]] = []
+    attendees: List[Union[str, Dict[str, Any]]] = []
     meeting_link: Optional[str] = None
     meeting_platform: str = "other"
 
 
 class MeetingCreate(MeetingBase):
     """Schema for meeting creation."""
-    event_id: str = None
+    event_id: Optional[str] = None
+    
+    @field_validator('attendees', mode='before')
+    @classmethod
+    def normalize_attendees(cls, v):
+        """Normalize attendees to list of dicts format."""
+        if not v:
+            return []
+        
+        normalized = []
+        for attendee in v:
+            if isinstance(attendee, str):
+                # Convert string email to dict format
+                normalized.append({"email": attendee})
+            elif isinstance(attendee, dict):
+                normalized.append(attendee)
+            else:
+                # Skip invalid formats
+                continue
+        
+        return normalized
+        return normalized
 
 
 class MeetingUpdate(BaseModel):
@@ -91,7 +112,7 @@ class MeetingResponse(MeetingBase):
     """Schema for meeting response."""
     id: uuid.UUID
     user_id: uuid.UUID
-    event_id: str
+    event_id: Optional[str] = None
     created_at: datetime
     is_confirmed: bool
     context_generated: bool
@@ -106,8 +127,22 @@ class ContextBase(BaseModel):
     ai_brief: Optional[str] = None
     meeting_type: str = "general"
     key_topics: List[str] = []
-    preparation_checklist: List[Dict[str, Any]] = []
+    preparation_checklist: List[Union[str, Dict[str, Any]]] = []
     attendee_context: Dict[str, str] = {}
+    
+    @field_validator('preparation_checklist', mode='before')
+    @classmethod
+    def normalize_checklist(cls, v: Any) -> List[Dict[str, Any]]:
+        """Convert string items to dict format."""
+        if not v:
+            return []
+        result = []
+        for item in v:
+            if isinstance(item, str):
+                result.append({"task": item, "completed": False})
+            elif isinstance(item, dict):
+                result.append(item)
+        return result
 
 
 class ContextCreate(ContextBase):
@@ -120,11 +155,25 @@ class ContextUpdate(BaseModel):
     ai_brief: Optional[str] = None
     meeting_type: Optional[str] = None
     key_topics: Optional[List[str]] = None
-    preparation_checklist: Optional[List[Dict[str, Any]]] = None
+    preparation_checklist: Optional[List[Union[str, Dict[str, Any]]]] = None
     attendee_context: Optional[Dict[str, str]] = None
+    
+    @field_validator('preparation_checklist', mode='before')
+    @classmethod
+    def normalize_checklist(cls, v: Any) -> Optional[List[Dict[str, Any]]]:
+        """Convert string items to dict format."""
+        if v is None:
+            return None
+        result = []
+        for item in v:
+            if isinstance(item, str):
+                result.append({"task": item, "completed": False})
+            elif isinstance(item, dict):
+                result.append(item)
+        return result
 
 
-class ContextUpdate(BaseModel):
+class ContextUpdateLegacy(BaseModel):
     """Schema for updating a context."""
     ai_brief: Optional[str] = None
     meeting_type: Optional[str] = None
@@ -215,6 +264,7 @@ class TokenResponse(BaseModel):
 class GoogleCallbackRequest(BaseModel):
     """Schema for Google OAuth callback request."""
     code: str
+    redirect_uri: str
     state: Optional[str] = None
 
 

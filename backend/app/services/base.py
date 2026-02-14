@@ -9,6 +9,7 @@ from uuid import UUID
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.models.db import User, Meeting, Context, Notification
 from app.schemas.base import (
     UserCreate, UserResponse, MeetingResponse, ContextResponse
@@ -67,25 +68,74 @@ class AuthService:
     
     async def get_or_create_google_user(
         self,
-        email: str,
-        name: str,
-        google_token: str
-    ) -> User:
-        """Get existing user or create new from Google OAuth."""
-        user = await self.user_repo.get_by_email(email)
-        
-        if not user:
-            user = User(
-                email=email,
-                name=name,
-                google_token=google_token
-            )
-            user = await self.user_repo.create(user)
-        else:
-            user.google_token = google_token
-            user = await self.user_repo.update(user)
-        
-        return user
+        code: str,
+        redirect_uri: str
+    ) -> Optional[User]:
+        """Get existing user or create new from Google OAuth code."""
+        try:
+            import httpx
+            from urllib.parse import urlencode
+            
+            logger.info(f"Exchanging Google OAuth code for token, redirect_uri: {redirect_uri}")
+            
+            # Exchange authorization code for access token
+            token_url = "https://oauth2.googleapis.com/token"
+            token_data = {
+                "code": code,
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "redirect_uri": redirect_uri,  # Use the redirect_uri from the request
+                "grant_type": "authorization_code"
+            }
+            
+            async with httpx.AsyncClient() as client:
+                # Get access token
+                token_response = await client.post(token_url, data=token_data)
+                if token_response.status_code != 200:
+                    logger.error(f"Token exchange failed: {token_response.status_code} - {token_response.text}")
+                    return None
+                
+                token_json = token_response.json()
+                access_token = token_json.get("access_token")
+                refresh_token = token_json.get("refresh_token")
+                
+                # Get user info from Google
+                userinfo_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+                headers = {"Authorization": f"Bearer {access_token}"}
+                
+                userinfo_response = await client.get(userinfo_url, headers=headers)
+                if userinfo_response.status_code != 200:
+                    logger.error(f"Failed to get user info: {userinfo_response.text}")
+                    return None
+                
+                user_info = userinfo_response.json()
+                email = user_info.get("email")
+                name = user_info.get("name", email)
+                
+                # Get or create user
+                user = await self.user_repo.get_by_email(email)
+                
+                if not user:
+                    user = User(
+                        email=email,
+                        name=name,
+                        google_token=access_token,
+                        google_refresh_token=refresh_token
+                    )
+                    user = await self.user_repo.create(user)
+                    logger.info(f"Created new user from Google OAuth: {email}")
+                else:
+                    user.google_token = access_token
+                    if refresh_token:
+                        user.google_refresh_token = refresh_token
+                    user = await self.user_repo.update(user)
+                    logger.info(f"Updated existing user with Google OAuth: {email}")
+                
+                return user
+                
+        except Exception as e:
+            logger.error(f"Error in Google OAuth: {str(e)}", exc_info=True)
+            return None
 
 
 class CalendarService:
@@ -143,7 +193,16 @@ class CalendarService:
         meeting_obj.synced_at = datetime.utcnow()
         
         if existing:
-            meeting_obj = await self.meeting_repo.update(meeting_obj)
+            update_data = {
+                "title": event_data.get("title", ""),
+                "description": event_data.get("description"),
+                "start_time": event_data.get("start_time"),
+                "end_time": event_data.get("end_time"),
+                "meeting_link": event_data.get("meeting_link"),
+                "attendees": [att['email'] for att in event_data.get("attendees", [])],
+                "synced_at": datetime.utcnow()
+            }
+            meeting_obj = await self.meeting_repo.update(existing.id, update_data)
         else:
             meeting_obj = await self.meeting_repo.create(meeting_obj)
         
@@ -239,8 +298,7 @@ class ContextService:
         context = await self.context_repo.create(context)
         
         # Mark meeting as context generated
-        meeting.context_generated = True
-        await self.meeting_repo.update(meeting)
+        await self.meeting_repo.update(meeting_id, {"context_generated": True})
         
         logger.info(f"Context created for meeting: {meeting_id}")
         return context
@@ -328,14 +386,57 @@ class NotificationService:
             logger.error(f"Meeting or user not found for notification {notification_id}")
             return False
         
-        # Send via dispatcher
-        success = await notification_dispatcher.send_notification(
-            notification=notification,
-            meeting=meeting,
-            user_email=user.email,
-            telegram_chat_id=user.telegram_chat_id,
-            context=context
-        )
+        # Calculate minutes until meeting
+        from app.utils.helpers import DateTimeUtils
+        minutes_until = int((meeting.start_time - datetime.utcnow()).total_seconds() / 60)
+        
+        # For 30-minute reminders, send to ALL attendees (creator + attendees)
+        # For creation confirmations (minutes_until ~= meeting duration), send only to creator
+        send_to_all = minutes_until > 0 and minutes_until <= 35  # 30-min reminder window
+        
+        if send_to_all and meeting.attendees:
+            # Send to meeting creator
+            success_creator = await notification_dispatcher.send_notification(
+                notification=notification,
+                meeting=meeting,
+                user_email=user.email,
+                telegram_chat_id=user.telegram_chat_id,
+                context=context
+            )
+            
+            # Send to all attendees
+            from app.services.notification_delivery import EmailNotificationService
+            email_service = EmailNotificationService()
+            attendee_count = 0
+            
+            for attendee in meeting.attendees:
+                try:
+                    # Extract email from attendee (could be string or dict)
+                    attendee_email = attendee if isinstance(attendee, str) else attendee.get("email")
+                    
+                    if attendee_email and attendee_email != user.email:  # Don't send duplicate to creator
+                        await email_service.send_meeting_reminder(
+                            to_email=attendee_email,
+                            meeting=meeting,
+                            context=context,
+                            minutes_until=minutes_until
+                        )
+                        attendee_count += 1
+                        logger.info(f"Sent reminder to attendee: {attendee_email}")
+                except Exception as e:
+                    logger.error(f"Failed to send to attendee: {e}")
+            
+            logger.info(f"Sent meeting reminder to creator + {attendee_count} attendees")
+            success = success_creator
+        else:
+            # Send only to the notification owner (creator)
+            success = await notification_dispatcher.send_notification(
+                notification=notification,
+                meeting=meeting,
+                user_email=user.email,
+                telegram_chat_id=user.telegram_chat_id,
+                context=context
+            )
         
         # Update notification status
         if success:

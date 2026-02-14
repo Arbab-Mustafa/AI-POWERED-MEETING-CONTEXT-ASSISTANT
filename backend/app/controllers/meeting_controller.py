@@ -27,7 +27,7 @@ router = APIRouter(prefix="/meetings", tags=["meetings"])
 async def get_meetings(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, le=100),
-    upcoming_only: bool = True,
+    upcoming_only: bool = False,
     current_user = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -59,7 +59,7 @@ async def get_meetings(
                 limit=limit
             )
         
-        return [MeetingResponse.from_orm(meeting) for meeting in meetings]
+        return [MeetingResponse.model_validate(meeting) for meeting in meetings]
         
     except Exception as e:
         logger.error(f"Error fetching meetings: {str(e)}")
@@ -103,7 +103,7 @@ async def get_meeting(
                 detail="Access denied"
             )
         
-        return MeetingDetailResponse.from_orm(meeting)
+        return MeetingDetailResponse.model_validate(meeting)
         
     except HTTPException:
         raise
@@ -135,41 +135,127 @@ async def create_meeting(
     try:
         meeting_repo = MeetingRepository(db)
         
-        # Create meeting
-        meeting = await meeting_repo.create({
-            "user_id": current_user.id,
-            "title": meeting_data.title,
-            "description": meeting_data.description,
-            "start_time": meeting_data.start_time,
-            "end_time": meeting_data.end_time,
-            "attendees": meeting_data.attendees,
-            "meeting_link": meeting_data.meeting_link,
-            "meeting_platform": meeting_data.meeting_platform,
-            "is_confirmed": True,
-            "is_cancelled": False,
-            "context_generated": False
-        })
+        logger.info(f"Creating meeting with data: title={meeting_data.title}, attendees={meeting_data.attendees}")
+        
+        # Convert timezone-aware datetimes to naive UTC (database uses TIMESTAMP WITHOUT TIME ZONE)
+        start_time_utc = meeting_data.start_time.replace(tzinfo=None) if meeting_data.start_time.tzinfo else meeting_data.start_time
+        end_time_utc = meeting_data.end_time.replace(tzinfo=None) if meeting_data.end_time.tzinfo else meeting_data.end_time
+        
+        # Create meeting object
+        from app.models.db import Meeting
+        meeting = Meeting(
+            user_id=current_user.id,
+            title=meeting_data.title,
+            description=meeting_data.description,
+            start_time=start_time_utc,
+            end_time=end_time_utc,
+            attendees=meeting_data.attendees,
+            meeting_link=meeting_data.meeting_link,
+            meeting_platform=meeting_data.meeting_platform,
+            event_id=meeting_data.event_id,
+            is_confirmed=True,
+            is_cancelled=False,
+            context_generated=False
+        )
+        
+        # Save to database
+        meeting = await meeting_repo.create(meeting)
         
         logger.info(f"Meeting created: {meeting.id} by user {current_user.email}")
         
-        # Generate AI context asynchronously (don't wait)
-        context_service = ContextService(db)
+        # ========== AUTO-SCHEDULE NOTIFICATIONS ==========
+        # Schedule reminder emails 30 minutes before meeting to ALL attendees
+        from app.services.base import NotificationService
+        notification_service = NotificationService(db)
+        
         try:
-            await context_service.generate_and_create_context(
+            notifications = []
+            
+            # Get all recipients: meeting creator + all attendees
+            recipients = [current_user.id]  # Start with creator
+            
+            # Add all attendees (need to create notifications for each)
+            # Note: attendees list contains dicts with 'email', we'll create notifications
+            # for the creator and schedule emails for attendee emails directly
+            
+            # Schedule notification for the meeting creator only
+            # (Attendees will get emails directly via their email addresses)
+            creator_notifications = await notification_service.schedule_notifications(
                 meeting_id=meeting.id,
                 user_id=current_user.id,
-                force_regenerate=False
+                reminder_times=[30],  # Only 30 minutes before meeting
+                meeting_start=meeting.start_time,
+                preferred_channels=["email"]
             )
-        except Exception as ctx_error:
-            logger.warning(f"Context generation failed for meeting {meeting.id}: {str(ctx_error)}")
+            notifications.extend(creator_notifications)
+            
+            logger.info(f"Scheduled {len(notifications)} notifications for meeting {meeting.id}")
+            meeting.notifications = notifications
+        except Exception as notif_error:
+            logger.error(f"Failed to schedule notifications: {notif_error}")
+            meeting.notifications = []
         
-        return MeetingDetailResponse.from_orm(meeting)
+        # ========== SEND IMMEDIATE CONFIRMATION EMAIL TO ALL ==========
+        # Send "Meeting Created" email to creator + ALL attendees
+        from app.services.notification_delivery import notification_dispatcher, EmailNotificationService
+        from app.repositories.base import ContextRepository
         
+        try:
+            email_service = EmailNotificationService()
+            
+            # Try to get AI context if it was generated
+            context_repo = ContextRepository(db)
+            context = await context_repo.get_by_meeting_id(meeting.id)
+            
+            # Send confirmation email to CREATOR
+            success = await email_service.send_meeting_reminder(
+                to_email=current_user.email,
+                meeting=meeting,
+                context=context,
+                minutes_until=0  # Immediate email (meeting created confirmation)
+            )
+            
+            if success:
+                logger.info(f"✉️ Sent meeting creation email to creator: {current_user.email}")
+            else:
+                logger.warning(f"Failed to send creation email to creator")
+            
+            # Send confirmation email to ALL ATTENDEES
+            if meeting.attendees:
+                sent_to_attendees = 0
+                for attendee in meeting.attendees:
+                    try:
+                        # Extract email from attendee (could be string or dict)
+                        attendee_email = attendee if isinstance(attendee, str) else attendee.get("email")
+                        
+                        if attendee_email and attendee_email != current_user.email:  # Don't send duplicate to creator
+                            await email_service.send_meeting_reminder(
+                                to_email=attendee_email,
+                                meeting=meeting,
+                                context=context,
+                                minutes_until=0  # Meeting created notification
+                            )
+                            sent_to_attendees += 1
+                            logger.info(f"✉️ Sent creation email to attendee: {attendee_email}")
+                    except Exception as attendee_error:
+                        logger.error(f"Failed to send to attendee {attendee_email}: {attendee_error}")
+                
+                logger.info(f"📧 Sent creation emails to {sent_to_attendees} attendees + creator")
+        except Exception as email_error:
+            logger.error(f"Error sending meeting creation email: {email_error}", exc_info=True)
+        
+        # Set context relationship (will be None initially)
+        meeting.context = None
+        
+        return MeetingDetailResponse.model_validate(meeting)
+    
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error creating meeting: {str(e)}")
+        logger.error(f"Error creating meeting: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create meeting"
+            detail=f"Failed to create meeting: {str(e)}"
         )
 
 
@@ -210,12 +296,12 @@ async def update_meeting(
             )
         
         # Update meeting
-        update_data = meeting_data.dict(exclude_unset=True)
+        update_data = meeting_data.model_dump(exclude_unset=True)
         updated_meeting = await meeting_repo.update(meeting_id, update_data)
         
         logger.info(f"Meeting updated: {meeting_id} by user {current_user.email}")
         
-        return MeetingDetailResponse.from_orm(updated_meeting)
+        return MeetingDetailResponse.model_validate(updated_meeting)
         
     except HTTPException:
         raise
@@ -366,7 +452,7 @@ async def get_today_meetings(
             end_date=end_of_day
         )
         
-        return [MeetingResponse.from_orm(meeting) for meeting in meetings]
+        return [MeetingResponse.model_validate(meeting) for meeting in meetings]
         
     except Exception as e:
         logger.error(f"Error fetching today's meetings: {str(e)}")

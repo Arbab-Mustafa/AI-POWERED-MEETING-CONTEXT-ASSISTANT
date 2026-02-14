@@ -3,17 +3,16 @@ Utility module for security, token management, and common helpers.
 """
 
 import os
+import logging
+import bcrypt
 from datetime import datetime, timedelta
 from typing import Optional
-from passlib.context import CryptContext
 from jose import JWTError, jwt
 import uuid
 
 from app.core.config import settings
 
-
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+logger = logging.getLogger(__name__)
 
 
 class SecurityUtils:
@@ -21,26 +20,30 @@ class SecurityUtils:
     
     @staticmethod
     def hash_password(password: str) -> str:
-        """Hash password using bcrypt.
+        """Hash password using bcrypt directly.
         
-        Note: bcrypt has a 72-byte limit. Passwords are truncated to 72 bytes
-        to prevent hashing errors.
+        bcrypt automatically truncates at 72 bytes.
         """
-        # Truncate password to 72 bytes for bcrypt compatibility
-        password_bytes = password.encode('utf-8')[:72]
-        password = password_bytes.decode('utf-8', errors='ignore')
-        return pwd_context.hash(password)
+        # Convert password to bytes
+        password_bytes = password.encode('utf-8')
+        
+        # bcrypt will automatically truncate at 72 bytes
+        salt = bcrypt.gensalt(rounds=12)
+        hashed = bcrypt.hashpw(password_bytes, salt)
+        
+        # Return as string
+        return hashed.decode('utf-8')
     
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:
-        """Verify password against hash.
-        
-        Note: Truncates password to 72 bytes to match hashing behavior.
-        """
-        # Truncate password to 72 bytes for bcrypt compatibility
-        password_bytes = plain_password.encode('utf-8')[:72]
-        plain_password = password_bytes.decode('utf-8', errors='ignore')
-        return pwd_context.verify(plain_password, hashed_password)
+        """Verify password against hash using bcrypt directly."""
+        try:
+            password_bytes = plain_password.encode('utf-8')
+            hashed_bytes = hashed_password.encode('utf-8')
+            return bcrypt.checkpw(password_bytes, hashed_bytes)
+        except Exception as e:
+            logger.error(f"Password verification failed: {e}")
+            return False
     
     @staticmethod
     def create_access_token(

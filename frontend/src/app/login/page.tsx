@@ -11,6 +11,20 @@ export default function LoginPage() {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [isLoading, setIsLoading] = useState(false);
 
+  const handleGoogleLogin = () => {
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` + 
+      new URLSearchParams({
+        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '66376034467-5iq6p7kervdg8iqq2p5mdo2suifp6g59.apps.googleusercontent.com',
+        redirect_uri: `${window.location.origin}/auth/callback`,
+        response_type: 'code',
+        scope: 'openid email profile https://www.googleapis.com/auth/calendar.readonly',
+        access_type: 'offline',
+        prompt: 'consent'
+      }).toString();
+    
+    window.location.href = googleAuthUrl;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -113,7 +127,8 @@ export default function LoginPage() {
 
         {/* Google Sign In */}
         <button
-          onClick={() => {/* TODO: Implement Google OAuth */}}
+          onClick={handleGoogleLogin}
+          type="button"
           className="mt-6 w-full bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition flex items-center justify-center"
         >
           <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
